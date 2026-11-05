@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>轮盘优化工作台 · DiskAgent</title>
+<style>
+:root{--ink:#183047;--muted:#6d8195;--navy:#10293f;--blue:#2864dc;--line:#e3eaf2;--bg:#f2f5f9;--orange:#b34c21;--green:#197855}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.6 "Segoe UI","Microsoft YaHei",sans-serif}button,textarea,select{font:inherit}button{cursor:pointer;border:1px solid var(--line);border-radius:9px;padding:9px 14px;background:white;color:var(--ink);transition:background .15s}button:hover{background:#edf3ff}button:disabled{opacity:.5;cursor:wait}header{background:var(--navy);color:white;padding:25px max(28px,calc((100vw - 1480px)/2));display:flex;justify-content:space-between;align-items:center;gap:20px}.brand{font-size:11px;letter-spacing:2px;color:#92b9e7}.brand span{display:inline-block;width:8px;height:8px;background:#64d9ad;border-radius:50%;margin-right:9px}h1{font-size:25px;letter-spacing:1px;line-height:1.3;margin:5px 0}header p{margin:0;color:#a9bdd0;font-size:12px}.local{border:1px solid #365064;border-radius:20px;padding:5px 12px;font-size:12px;white-space:nowrap}.layout{max-width:1536px;margin:auto;padding:25px 28px;display:grid;grid-template-columns:338px minmax(0,1fr);gap:21px}.panel{background:white;border:1px solid var(--line);border-radius:14px;box-shadow:0 3px 14px #17314f04;padding:21px;margin-bottom:18px}.section-title{font-size:16px;font-weight:650;margin:0 0 15px}.eyebrow{font-size:11px;letter-spacing:1.5px;color:var(--muted);font-weight:600}.muted{color:var(--muted);font-size:12px}.request{width:100%;height:132px;border:1px solid #d7e0eb;border-radius:10px;background:#fafcfe;padding:12px;resize:vertical;outline:none}.request:focus,select:focus{border-color:var(--blue);box-shadow:0 0 0 3px #2864dc12}.hint{margin:7px 0 14px;color:var(--muted);font-size:12px}.field-label{display:block;margin:13px 0 5px;font-size:12px;color:#546e86}select{width:100%;padding:9px;border:1px solid #d7e0eb;border-radius:8px;background:white;outline:none}.checkbox{display:flex;gap:8px;align-items:flex-start;font-size:12px;margin:14px 0}input[type=checkbox]{accent-color:var(--blue);margin-top:4px}.actions{display:grid;gap:9px}.primary{background:var(--blue);border-color:var(--blue);color:white}.primary:hover{background:#2057c3}.live{background:#fff6ef;border:1px solid #eac9b5;color:var(--orange);font-weight:600}.live:hover{background:#ffeddf}.example{border:0;background:#f0f4fa;color:#4d6984;padding:5px 8px;font-size:11px;margin:0 4px 6px 0}.list-title{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}.list-title h2{font-size:14px;margin:0}.small-button{font-size:11px;padding:4px 8px}.list{max-height:245px;overflow:auto;display:grid;gap:7px}.list-item{text-align:left;width:100%;border-radius:8px;padding:10px;font-size:12px;overflow:hidden}.list-item.selected{background:#edf3ff;border-color:#9bb9f4}.item-name{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.item-meta{font-size:11px;color:var(--muted);display:flex;justify-content:space-between;gap:8px;margin-top:4px}.empty{padding:22px 10px;text-align:center;color:#8999a8;font-size:12px}.topline{display:flex;justify-content:space-between;align-items:center;gap:15px;margin-bottom:16px}.topline h2{font-size:20px;margin:0}.badge{font-size:12px;background:#eef3fa;border-radius:20px;padding:4px 11px;color:#57718a;white-space:nowrap}.badge.running{color:#225dc0;background:#eaf1ff}.badge.completed{color:var(--green);background:#e7f5ef}.badge.failed,.badge.interrupted,.badge.needs_review{color:#a83d37;background:#fceceb}.badge.clarification_needed{color:#9b6810;background:#fff5dd}.notice{padding:12px 15px;background:#edf3ff;border:1px solid #d9e5fa;border-radius:10px;margin-bottom:17px;white-space:pre-wrap;font-size:13px}.notice.error{background:#fff1ef;border-color:#efd0cb;color:#a04236}.notice:empty{display:none}.steps{display:flex;align-items:center;gap:8px;padding-bottom:19px;border-bottom:1px solid var(--line);margin-bottom:20px;font-size:12px;color:#8798a9}.steps span{flex:1;text-align:center;background:#f4f7fb;padding:7px 3px;border-radius:6px}.steps span.active{background:#eaf1ff;color:#2864dc;font-weight:600}.steps b{font-weight:400;color:#acbac7}.cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:19px}.stat{border:1px solid var(--line);border-radius:11px;padding:14px}.stat .label{font-size:12px;color:var(--muted)}.stat .number{font-size:26px;line-height:1.4;font-weight:650;letter-spacing:-.7px;margin-top:7px}.stat .unit{font-size:11px;color:#7e90a2;margin-top:3px}.good{color:var(--green)}.progress-track{height:7px;border-radius:9px;background:#edf1f7;overflow:hidden;margin:12px 0 5px}.progress-fill{height:100%;width:0;background:var(--blue);transition:width .4s}.progress-info{display:flex;justify-content:space-between;font-size:12px;color:var(--muted)}.row{display:flex;justify-content:space-between;align-items:center;gap:10px}.resume-actions{display:flex;gap:8px;flex-wrap:wrap}.box{margin-top:20px}.box h3{font-size:14px;margin:0 0 10px}.plot-wrap{border:1px solid var(--line);border-radius:10px;padding:13px;background:#fcfdff;min-height:210px}.plot-wrap svg{display:block;width:100%;height:205px}.plot-note{font-size:11px;color:var(--muted);margin-top:7px}.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}.evidence{border:1px solid var(--line);border-radius:10px;padding:13px;font-size:12px;background:#fafcfe}.evidence .key{color:var(--muted);display:inline-block;min-width:83px}.warning{color:#946922;background:#fff9ed;border:1px solid #efe4c8;border-radius:9px;padding:11px 13px;font-size:12px;margin-top:17px}.code{font:11px/1.7 Consolas,"Microsoft YaHei",monospace;white-space:pre-wrap;overflow-wrap:anywhere;background:#f7f9fc;border:1px solid var(--line);border-radius:9px;padding:12px;max-height:270px;overflow:auto;margin:0}.report{max-height:440px}.tabs{display:flex;gap:7px;border-bottom:1px solid var(--line);padding-bottom:10px;margin-bottom:13px}.tabs button{padding:5px 12px;font-size:12px}.tabs button.active{background:#edf3ff;color:var(--blue);border-color:#adc5f2}.hidden{display:none!important}.footer{max-width:1480px;padding:0 28px 24px;margin:auto;color:#8394a4;font-size:11px}.detail-id{font:11px Consolas,monospace;color:#8899a9;overflow-wrap:anywhere}.summary{font-size:13px;color:#4d657c;margin:12px 0 0}.error-detail{color:#a04236;white-space:pre-wrap;font-size:12px;margin-top:10px}.caption{margin-top:10px;font-size:11px;color:#8798a9}@media(max-width:1100px){.layout{grid-template-columns:300px minmax(0,1fr);padding:20px;gap:15px}.cards{grid-template-columns:1fr 1fr}.two-col{grid-template-columns:1fr}}@media(max-width:760px){header{padding:20px}.local{display:none}.layout{display:block;padding:15px}.cards{gap:8px}.panel{padding:17px}.steps{gap:3px;font-size:10px}.steps b{display:none}.topline h2{font-size:18px}.stat .number{font-size:23px}.row{align-items:flex-start;flex-direction:column}.list{max-height:180px}}
+.parameters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.parameter{padding:9px 12px;border:1px solid var(--line);border-radius:8px;background:#fafcfe;font-size:12px;display:flex;justify-content:space-between;gap:8px}.parameter strong{font-weight:600}
+.tabs{flex-wrap:wrap}.decision-banner{margin:0 0 14px;padding:12px 14px;border:1px solid #dce7f4;background:#f3f7fd;border-radius:9px;font-size:12px;color:#56708a}.decision-list{display:grid;gap:16px}.decision-card{border:1px solid var(--line);border-radius:11px;padding:17px;background:#fff}.decision-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:12px}.decision-heading h3{margin:0;font-size:15px}.decision-id{font:10px/1.8 Consolas,monospace;color:#8496a8;overflow-wrap:anywhere}.decision-tags{display:flex;gap:6px;flex-wrap:wrap}.decision-tag{border:1px solid #dce6f2;border-radius:5px;background:#f4f7fb;color:#53718f;font-size:10px;padding:3px 7px}.decision-tag.cached{background:#fff7e9;border-color:#eddfc1;color:#8f6c24}.decision-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}.decision-block{border:1px solid var(--line);border-radius:8px;padding:12px;background:#fbfcfe;min-width:0}.decision-label{font-size:11px;font-weight:650;color:#5b7289;margin-bottom:7px}.decision-copy{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.8 "Segoe UI","Microsoft YaHei",sans-serif;color:#425f79}.decision-context{margin-top:8px;font-size:11px;color:#8092a5;white-space:pre-wrap;overflow-wrap:anywhere}.decision-hypothesis{margin-top:13px;padding:12px;background:#fffaf1;border:1px solid #eee2cd;border-radius:8px}.decision-center{margin-top:10px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}.decision-center span{font:10px/1.8 Consolas,"Microsoft YaHei",monospace;background:#fff;border:1px solid #e6eaf0;padding:3px 6px;border-radius:4px}.decision-provenance{margin-top:12px;color:#7c8fa3;font-size:11px}.decision-provenance summary{cursor:pointer}.decision-provenance pre{font:10px/1.8 Consolas,"Microsoft YaHei",monospace;white-space:pre-wrap;overflow-wrap:anywhere;background:#f7f9fc;padding:10px;border-radius:6px}@media(max-width:950px){.decision-grid{grid-template-columns:1fr}}
+.prediction-heading{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:15px}.prediction-heading h3{margin:0;font-size:15px}.prediction-cards{grid-template-columns:repeat(4,minmax(0,1fr))}.prediction-card .number{font-size:22px}.prediction-table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:9px}.prediction-table{width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap}.prediction-table th{text-align:left;background:#f4f7fb;color:#607990;font-size:11px;font-weight:600;padding:10px}.prediction-table td{padding:12px 10px;border-top:1px solid var(--line);vertical-align:top}.prediction-table td.meta{max-width:235px;white-space:normal;overflow-wrap:anywhere}.prediction-cell-main{font-weight:600;color:#2d4d6c}.prediction-cell-note{font-size:10px;color:#8395a6;white-space:normal;margin-top:4px}.prediction-note{font-size:12px;color:#71879c;white-space:pre-wrap;margin:11px 0}.prediction-evidence{margin-top:15px}.prediction-evidence pre{max-height:220px}@media(max-width:1000px){.prediction-cards{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<header><div><div class="brand"><span></span>DISKAGENT / ENGINEERING WORKBENCH</div><h1>轮盘优化工作台</h1><p>自然语言任务 · 串行求解 · 已提交结果分析</p></div><div class="local" id="connection">● 本地连接中</div></header>
+<main class="layout">
+<aside>
+<section class="panel"><div class="eyebrow">NEW TASK</div><h2 class="section-title">描述本次优化任务</h2>
+<textarea class="request" id="request" maxlength="4000" placeholder="例如：新建优化4个候选，最小化轮盘最大应力"></textarea>
+<p class="hint">请明确真实候选数量；续算请说明“追加”或“总预算”。基准评价另计。</p>
+<button class="example" data-example="新建优化4个候选，最小化最大应力">新建 4 个候选</button><button class="example" data-example="检查当前轮盘优化环境">检查环境</button>
+<label class="field-label" for="context">已有运行上下文（可选）</label><select id="context"><option value="">新任务 / 按文字指定</option></select>
+<label class="checkbox"><input type="checkbox" id="use-llm"><span>启用规划 LLM <span class="muted">（会调用 API，默认关闭）</span></span></label>
+<div class="actions"><button class="primary" id="preview">预览任务</button><button class="live" id="start">开始真实计算</button></div>
+<p class="caption">预览优化只做规划和校验；真实计算会调用优化 LLM 与 Workbench。关闭页面不停止任务；服务需保持运行。</p></section>
+<section class="panel"><div class="list-title"><h2>工作流</h2><button class="small-button" id="refresh">刷新</button></div><div class="list" id="workflows"><div class="empty">正在读取…</div></div></section>
+<section class="panel"><div class="list-title"><h2>已有运行</h2><span class="muted">只读分析</span></div><div class="list" id="runs"><div class="empty">正在读取…</div></div></section>
+</aside>
+<div>
+<div id="message" class="notice" role="status"></div>
+<section class="panel">
+<div class="topline"><div><div class="eyebrow">WORKFLOW OVERVIEW</div><h2 id="detail-title">从一条明确的任务开始</h2></div><span class="badge" id="status">待选择</span></div>
+<div class="detail-id" id="detail-id">所有计算均由你主动提交，页面轮询只读取状态。</div>
+<div class="steps" id="steps"><span>任务规划</span><b>→</b><span>输入校验</span><b>→</b><span>串行求解</span><b>→</b><span>结果分析</span><b>→</b><span>生成报告</span></div>
+<div class="cards"><div class="stat"><div class="label">已提交候选</div><div class="number" id="candidate-count">—</div><div class="unit">不含基准</div></div><div class="stat"><div class="label">历史最优最大应力</div><div class="number" id="best-stress">—</div><div class="unit">MPa</div></div><div class="stat"><div class="label">较基准应力降低</div><div class="number good" id="improvement">—</div><div class="unit">%</div></div><div class="stat"><div class="label">最优方案面积变化</div><div class="number" id="area-change">—</div><div class="unit">%，近似截面积</div></div></div>
+<div class="progress-track"><div class="progress-fill" id="progress"></div></div><div class="progress-info"><span id="progress-text">尚无候选结果</span><span id="run-status"></span></div>
+<div class="row box"><span class="muted" id="analysis-basis">指标仅依据已提交的计算记录。</span><div class="resume-actions" id="resume-actions"><button id="resume-preview">预览恢复</button><button class="live" id="resume-live">继续真实计算</button></div></div>
+<div class="error-detail" id="error-detail"></div><p class="summary" id="summary"></p>
+<div class="warning">强度许用值、质量与寿命要求：未评价。应力降低不代表工程合格；近似截面积不等于质量。</div>
+</section>
+<section class="panel"><div class="tabs"><button class="active" data-tab="results">结果与证据</button><button data-tab="feedback">批次反馈与决策</button><button data-tab="predictions">性能预测</button><button data-tab="task">结构化任务</button><button data-tab="report">结果报告</button></div>
+<div id="tab-results"><div class="box" style="margin-top:0"><h3>最大等效应力变化 <span class="muted">/ 已提交样本</span></h3><div class="plot-wrap" id="chart"><div class="empty">完成基准和候选评价后显示应力曲线</div></div><div class="plot-note">实线为样本应力，虚线为历史最优；横轴 0 为基准。</div></div>
+<div class="box"><h3>历史最优尺寸 <span class="muted">/ mm，沿用原模型数值约定</span></h3><div class="parameters" id="best-parameters"><span class="muted">尚无最优方案</span></div></div>
+<div class="two-col box"><div class="evidence"><div class="eyebrow">EVIDENCE</div><div><span class="key">数据来源</span>控制器已提交记录</div><div><span class="key">原生记录复核</span><span id="verification">尚无分析</span></div><div><span class="key">工程资格判定</span>未评价</div></div><div class="evidence"><div class="eyebrow">COSTS</div><div><span class="key">HTTP 尝试</span><span id="http-attempts">未知</span></div><div><span class="key">总 Token</span><span id="tokens">未知</span></div><div><span class="key">统计覆盖</span><span id="cost-coverage">尚无成本分析</span></div></div></div>
+<div class="muted box" id="warnings"></div></div>
+<div id="tab-feedback" class="hidden"><div class="decision-banner" id="feedback-policy">选择工作流后显示反馈策略与决策依据。</div><div class="decision-list" id="decision-trace"><div class="empty">尚无决策记录</div></div></div>
+<div id="tab-predictions" class="hidden">
+<div class="prediction-heading"><div><h3>GP 性能预测 · 最大等效应力</h3><span class="muted">只读查看实算前的预测审计与后续实测</span></div><button class="small-button" id="refresh-predictions" disabled>刷新预测记录</button></div>
+<div class="decision-banner" id="prediction-message">尚未绑定运行。选择已有运行，或选择已绑定运行的工作流。</div>
+<div class="cards prediction-cards"><div class="stat prediction-card"><div class="label">代理模型</div><div class="number">GP</div><div class="unit">高斯过程 · 仅最大应力</div></div><div class="stat prediction-card"><div class="label">已提交实测样本</div><div class="number" id="prediction-samples">—</div><div class="unit" id="prediction-unique">含基准，按记录统计</div></div><div class="stat prediction-card"><div class="label">最少样本门槛</div><div class="number" id="prediction-minimum">—</div><div class="unit">达到门槛后仍需验证</div></div><div class="stat prediction-card"><div class="label">可比较的事前预测</div><div class="number" id="prediction-compared">—</div><div class="unit" id="prediction-records-count">不是事后拟合的对比</div></div></div>
+<div class="row"><span class="badge" id="prediction-status">未读取</span><span class="muted" id="prediction-read-time">按需读取，不随每 3 秒状态轮询重复训练。</span></div>
+<p class="prediction-note" id="prediction-summary">旧历史如无实算前预测记录，明确标记无对比，不进行事后回填。</p>
+<div id="prediction-records"><div class="empty">尚未读取预测审计记录</div></div>
+<div class="warning">预测均值与模型后验标准差仅描述代理模型估计；标准差不是已校准的 95% 置信区间，也不代替有限元实算。</div>
+<p class="prediction-note" id="prediction-limitations"></p>
+<details class="prediction-evidence"><summary class="muted">模型验证与数据来源</summary><pre class="code" id="prediction-evidence">未读取</pre></details>
+</div>
+<div id="tab-task" class="hidden"><pre class="code" id="task-json">选择或预览任务后显示结构化任务单。</pre></div>
+<div id="tab-report" class="hidden"><pre class="code report" id="report">此工作流尚无已生成的结果报告。</pre></div>
+</section>
+</div></main>
+<footer class="footer">本地工作台仅监听 127.0.0.1 · 单个后台任务串行执行 · 每 3 秒刷新状态</footer>
+<script>
+'use strict';
+const $=id=>document.getElementById(id);const state={token:null,selected:null,kind:null,job:null,jobFocused:null,busy:false,refreshing:false,refreshQueued:false,lastPreview:null,previewSignature:null,reportKey:null,predictionRun:null,predictionRequest:0,predictionLoadingRun:null};
+const labels={received:'已接收',planning:'规划中',clarification_needed:'需要补充信息',planned:'已生成任务',validating:'校验中',validated:'已校验 / 待执行',checking:'环境预检',running:'计算中',analyzing:'分析中',completed:'已完成',failed:'失败',interrupted:'已中断',needs_review:'需要检查',workflow_read:'读取状态',analyzed:'已分析',complete:'计算完成',unknown:'未知'};
+const num=(v,d=2)=>typeof v==='number'&&Number.isFinite(v)?v.toLocaleString('zh-CN',{maximumFractionDigits:d,minimumFractionDigits:d}):'—';
+function text(id,value){$(id).textContent=value==null?'—':String(value)}
+function message(value,error=false){text('message',value||'');$('message').className='notice'+(error?' error':'')}
+function signature(){return JSON.stringify({request:$('request').value.trim(),use_llm:$('use-llm').checked,context_run_id:$('context').value||null})}
+async function api(path,options={}){const headers=Object.assign({},options.headers||{});if(options.method==='POST'){headers['Content-Type']='application/json';headers['X-CSRF-Token']=state.token}const response=await fetch(path,Object.assign({},options,{headers,cache:'no-store'}));const type=response.headers.get('content-type')||'';const value=type.includes('application/json')?await response.json():await response.text();if(!response.ok)throw new Error(value.error?.message||String(value));return value}
+function busy(value){state.busy=value;['preview','start','resume-preview','resume-live'].forEach(id=>$(id).disabled=value)}
+function clearPreview(){state.lastPreview=null;state.previewSignature=null}
+async function submit(live){const request=$('request').value.trim();if(!request){message('请先输入任务，并明确候选预算。',true);return}const sig=signature();const reuse=live&&state.lastPreview&&state.previewSignature===sig;try{busy(true);const result=await api(reuse?'/api/workflows/'+encodeURIComponent(state.lastPreview)+'/resume':'/api/workflows',{method:'POST',body:JSON.stringify(reuse?{live:true}:{request,live,use_llm:$('use-llm').checked,context_run_id:$('context').value||null})});state.job=result.job_id;state.pendingPreview=!live;state.pendingSignature=sig;message(live?'任务已提交，正在执行真实计算。':'正在生成任务与校验输入…');await refresh()}catch(error){busy(false);message(error.message,true)}}
+async function resume(live){if(state.kind!=='workflow'||!state.selected)return;try{busy(true);const result=await api('/api/workflows/'+encodeURIComponent(state.selected)+'/resume',{method:'POST',body:JSON.stringify({live})});state.job=result.job_id;state.pendingPreview=false;message(live?'已提交继续计算；沿用原工作流的运行绑定和预算。':'正在读取并预览恢复状态…');await refresh()}catch(error){busy(false);message(error.message,true)}}
+function listItem(entry,kind){const button=document.createElement('button');button.className='list-item'+(state.selected===(entry.workflow_id||entry.run_id)&&state.kind===kind?' selected':'');const title=document.createElement('div');title.className='item-name';title.textContent=kind==='workflow'?(entry.request_text||entry.workflow_id):entry.run_id;const meta=document.createElement('div');meta.className='item-meta';const status=document.createElement('span');status.textContent=labels[entry.status]||entry.status;const progress=document.createElement('span');const p=entry.progress||entry;progress.textContent=String(p.completed_candidates??0)+' / '+String(p.target_total_candidates??'—');meta.append(status,progress);button.append(title,meta);button.addEventListener('click',()=>select(kind,entry.workflow_id||entry.run_id));return button}
+function showList(id,entries,kind){const fragment=document.createDocumentFragment();for(const item of entries)fragment.append(listItem(item,kind));if(!entries.length){const empty=document.createElement('div');empty.className='empty';empty.textContent=kind==='workflow'?'还没有工作流，先预览一条任务':'尚无已有运行';fragment.append(empty)}$(id).replaceChildren(fragment)}
+async function select(kind,id){state.kind=kind;state.selected=id;state.reportKey=null;if(!state.job)message('');await refresh()}
+function badge(value){const el=$('status');el.textContent=labels[value]||value;el.className='badge '+(Object.hasOwn(labels,value)?value:'')}
+function decisionElement(tag,className,value){const element=document.createElement(tag);if(className)element.className=className;if(value!=null)element.textContent=String(value);return element}
+function preparePredictionRun(runId){
+  if(state.predictionRun===runId)return;
+  state.predictionRun=runId;state.predictionRequest+=1;state.predictionLoadingRun=null;
+  $('refresh-predictions').disabled=!runId;
+  for(const id of ['prediction-samples','prediction-minimum','prediction-compared'])text(id,'—');
+  text('prediction-status','未读取');$('prediction-status').className='badge';
+  text('prediction-unique','含基准，按记录统计');text('prediction-records-count','不是事后拟合的对比');
+  text('prediction-summary','旧历史如无实算前预测记录，明确标记无对比，不进行事后回填。');
+  text('prediction-read-time','按需读取；提交新候选后，请刷新预测记录。');
+  text('prediction-message',runId?'绑定运行：'+runId+'。打开此页签或点击刷新，读取当前预测审计。':'尚未绑定运行。选择已有运行，或选择已绑定运行的工作流。');
+  text('prediction-limitations','');text('prediction-evidence','未读取');
+  $('prediction-records').replaceChildren(decisionElement('div','empty',runId?'尚未读取预测审计记录':'未绑定运行，无预测记录可读。'));
+  if(runId&&!$('tab-predictions').classList.contains('hidden'))loadPredictions();
+}
+function renderPredictions(data){
+  const statusLabels={no_baseline:'尚无已提交基准',insufficient_data:'样本不足',validation_failed:'验证未通过',ready:'模型已通过验证',unavailable:'预测信息不可用'};
+  const reasonLabels={insufficient_measured_samples:'实测样本未达到预测门槛。',insufficient_unique_samples:'不同设计样本不足。',validation_error_above_limit:'验证误差超过设置门槛。',cross_validation_and_forward_holdout_passed:'交叉验证和前向留出验证通过。',no_baseline:'尚无已提交基准。'};
+  text('prediction-message','绑定运行：'+(data.run_id||state.predictionRun)+'。'+(data.error?.message?'检查不可用：'+data.error.message:(reasonLabels[data.reason]||data.reason||'已读取预测信息。')));
+  text('prediction-status',Object.hasOwn(statusLabels,data.status)?statusLabels[data.status]:data.status||'状态未记录');
+  $('prediction-status').className='badge '+(data.status==='ready'?'completed':data.status==='insufficient_data'?'clarification_needed':['validation_failed','unavailable'].includes(data.status)?'failed':'');
+  text('prediction-samples',Number.isInteger(data.measured_samples)?data.measured_samples:'—');
+  text('prediction-unique',Number.isInteger(data.unique_samples)?'不同设计 '+data.unique_samples+' 个；含基准':'不同设计数量未记录');
+  text('prediction-minimum',Number.isInteger(data.minimum_samples)?data.minimum_samples:'—');
+  const records=Array.isArray(data.records)?data.records:[];const summary=data.record_summary||{};
+  text('prediction-compared',Number.isInteger(summary.compared_records)?summary.compared_records:'—');
+  text('prediction-records-count',Number.isInteger(summary.pre_evaluation_prediction_records)?'事前审计 '+summary.pre_evaluation_prediction_records+' 条':'事前审计数量未记录');
+  const missing=Number.isInteger(summary.missing_pre_prediction_count)?summary.missing_pre_prediction_count:records.filter(r=>r.status==='missing_pre_prediction').length;
+  const notes=[];
+  if(missing)notes.push(missing+' 个候选缺少实算前预测，不能对比，不做事后回填。');
+  if(!records.length)notes.push(data.status==='unavailable'?'本次检查未成功，无法判断历史预测记录是否完整，也不能计算预测误差。':'没有可展示的实算前预测对比记录；不会将当前模型的拟合值补作历史预测。');
+  if(Number.isFinite(summary.mean_absolute_error_mpa))notes.push('已比较记录 MAE '+num(summary.mean_absolute_error_mpa,3)+' MPa，RMSE '+num(summary.root_mean_squared_error_mpa,3)+' MPa。');
+  if(summary.note)notes.push(String(summary.note));
+  if(records.length)notes.push('按候选编号倒序显示，最新记录在前。');
+  if(records.length>100)notes.push('共 '+records.length+' 条记录，当前显示最近 100 条。');
+  text('prediction-summary',notes.join('\n')||'以下仅比较实算前已保存的数值预测与已提交实测；误差为实算值减预测值。');
+  const holder=$('prediction-records');holder.replaceChildren();
+  if(records.length){
+    const wrap=decisionElement('div','prediction-table-wrap');const table=decisionElement('table','prediction-table');
+    const head=decisionElement('thead');const heading=decisionElement('tr');
+    for(const label of ['候选 / 记录状态','时间与来源','实算前预测 / MPa','实算 / MPa','实算 − 预测 / MPa'])heading.append(decisionElement('th',null,label));
+    head.append(heading);table.append(head);const body=decisionElement('tbody');
+    const recordLabels={missing_pre_prediction:'无事前预测',pending:'等待实算',not_ready:'当时模型未就绪',compared:'已有预测与实算',awaiting_commit:'等待结果提交'};
+    for(const record of records.slice(-100).reverse()){
+      const row=decisionElement('tr');const label=decisionElement('td');
+      label.append(decisionElement('div','prediction-cell-main','候选 '+String(record.iteration??'—')),
+                   decisionElement('div','prediction-cell-note',Object.hasOwn(recordLabels,record.status)?recordLabels[record.status]:record.status||'未记录状态'));
+      const source=decisionElement('td','meta');source.append(decisionElement('div',null,record.created_at||'时间未记录'));
+      source.append(decisionElement('div','prediction-cell-note',record.status==='missing_pre_prediction'?'没有事前审计来源':record.record_id||'审计 ID 未记录'));
+      if(Number.isInteger(record.basis_completed_candidates))source.append(decisionElement('div','prediction-cell-note','预测依据：此前 '+record.basis_completed_candidates+' 个已提交候选'));
+      if(record.record_file){const details=decisionElement('details','prediction-cell-note');details.append(decisionElement('summary',null,'来源文件'),decisionElement('div',null,record.record_file));source.append(details)}
+      const predicted=decisionElement('td');const hasPrediction=record.status!=='missing_pre_prediction'&&Number.isFinite(record.predicted_stress_mpa);
+      predicted.append(decisionElement('div','prediction-cell-main',hasPrediction?num(record.predicted_stress_mpa,3):record.status==='missing_pre_prediction'?'无事前记录':'无数值预测'));
+      if(hasPrediction)predicted.append(decisionElement('div','prediction-cell-note','后验标准差 '+num(record.predictive_std_mpa,3)+' MPa'));
+      const actual=decisionElement('td');actual.append(decisionElement('div','prediction-cell-main',num(record.actual_stress_mpa,3)));
+      const error=decisionElement('td');const compared=hasPrediction&&record.status==='compared';
+      error.append(decisionElement('div','prediction-cell-main',compared?num(record.error_mpa,3):!hasPrediction?'不可比较':'待比较'));
+      if(compared)error.append(decisionElement('div','prediction-cell-note','绝对误差 '+num(record.absolute_error_mpa,3)+' MPa\n相对误差 '+num(record.relative_error_percent,3)+' %'));
+      row.append(label,source,predicted,actual,error);body.append(row);
+    }
+    table.append(body);wrap.append(table);holder.append(wrap);
+  }else holder.append(decisionElement('div','empty',data.status==='unavailable'?'预测记录暂不可读，请检查上方错误信息。':'无事前预测对比记录，不回填历史预测。'));
+  text('prediction-limitations',Array.isArray(data.limitations)?data.limitations.join('\n'):data.limitations||'本页只读审计，不改变候选、预算或有限元求解结果。');
+  text('prediction-evidence',JSON.stringify({model_version:data.model_version,role:data.role,validation:data.validation,
+      source_completed_candidates:data.source_completed_candidates,source_history_signature:data.source_history_signature,
+      model_code_signature:data.model_code_signature,data_signature:data.data_signature,problem_signature:data.problem_signature,
+      config_signature:data.config_signature,evidence:data.evidence,error:data.error},null,2));
+}
+async function loadPredictions(){
+  const runId=state.predictionRun;
+  if(!runId){text('prediction-message','尚未绑定运行，无法读取预测审计。');return;}
+  if(state.predictionLoadingRun===runId)return;
+  const version=++state.predictionRequest;state.predictionLoadingRun=runId;$('refresh-predictions').disabled=true;
+  text('prediction-message','正在只读检查 '+runId+' 的预测记录与样本状态…');
+  try{
+    const response=await api('/api/runs/'+encodeURIComponent(runId)+'/predictions');
+    if(version!==state.predictionRequest||state.predictionRun!==runId)return;
+    renderPredictions(response.data||{});
+    text('prediction-read-time','读取于 '+new Date().toLocaleTimeString('zh-CN')+'；提交新候选后请刷新。');
+  }catch(error){if(version===state.predictionRequest){text('prediction-message','读取失败：'+error.message);text('prediction-status','读取失败');$('prediction-status').className='badge failed';}}
+  finally{if(version===state.predictionRequest){state.predictionLoadingRun=null;$('refresh-predictions').disabled=!state.predictionRun;}}
+}
+function renderDecisions(workflow,kind){
+  const container=$('decision-trace');container.replaceChildren();
+  const policy=workflow?.feedback_policy;
+  const trace=Array.isArray(workflow?.decision_trace)?workflow.decision_trace:[];
+  if(kind==='run'){
+    text('feedback-policy','此历史运行仅展示原有实测结果，未关联工作流的反馈决策记录。');
+    container.append(decisionElement('div','empty','无工作流决策轨迹；不会根据历史 rationale 补造反馈。'));return;
+  }
+  const enabled=policy?.enabled===true;
+  text('feedback-policy',enabled?'已启用批次反馈：使用已提交实测结果形成下一批决策依据。模型理由是搜索假设，后续实测结果单独记录。':policy==null?'旧工作流未启用批次反馈闭环，沿用原有策略。旧缓存理由不代表使用了新的实测反馈。':'此工作流的已保存策略未启用批次反馈闭环，按该策略执行；不会自动切换反馈策略。');
+  if(!trace.length){container.append(decisionElement('div','empty',enabled?'尚无决策记录；完成初始取样或下一批规划后更新。':'无批次反馈与决策记录。'));return;}
+  const entries=[...trace].sort((a,b)=>(Number.isInteger(a.generation)?a.generation:0)-(Number.isInteger(b.generation)?b.generation:0));
+  for(const entry of entries){
+    const card=decisionElement('article','decision-card');
+    const heading=decisionElement('div','decision-heading');
+    const title=decisionElement('div');title.append(decisionElement('h3',null,'第 '+String(entry.generation??'—')+' 代决策'),decisionElement('div','decision-id',entry.decision_id||'决策 ID 未记录'));
+    const tags=decisionElement('div','decision-tags');
+    const sourceLabels={feedback_augmented:'使用实测反馈',cached_legacy:'旧缓存 / 无新反馈',initial_lhs:'初始 LHS 取样'};
+    const source=Object.hasOwn(sourceLabels,entry.source_kind)?sourceLabels[entry.source_kind]:'来源未记录';
+    tags.append(decisionElement('span','decision-tag'+(entry.source_kind==='cached_legacy'?' cached':''),source));
+    if(entry.request_status==='reused_plan')tags.append(decisionElement('span','decision-tag cached','复用已保存计划'));
+    else if(entry.request_status==='new_request')tags.append(decisionElement('span','decision-tag','本工作流首次记录'));
+    if(entry.cache_reused===true)tags.append(decisionElement('span','decision-tag cached','沿用已有缓存'));
+    heading.append(title,tags);card.append(heading);
+    const grid=decisionElement('div','decision-grid');
+    const basis=decisionElement('div','decision-block');
+    basis.append(decisionElement('div','decision-label',entry.source_kind==='feedback_augmented'?'上一批实测摘要':'决策背景（非新增实测反馈）'));
+    basis.append(decisionElement('pre','decision-copy',entry.feedback_summary||'未记录反馈摘要。'));
+    const completed=Number.isInteger(entry.feedback_source_completed_candidates)?entry.feedback_source_completed_candidates:null;
+    basis.append(decisionElement('div','decision-context','反馈 ID：'+(entry.feedback_id||'无')+'\n上一批依据：'+(completed==null?'未记录来源候选进度':'截至 '+completed+' 个已提交候选（不含基准）')+'\n绑定运行：'+(entry.run_id||'未记录')+'\n反馈来源工作流：'+(entry.feedback_source_workflow_id||'未记录')));
+    const outcome=entry.outcome||{};
+    const result=decisionElement('div','decision-block');
+    const outcomeLabels={pending:'尚待实测',partial:'部分候选已提交',completed:'本批实测已完成'};
+    result.append(decisionElement('div','decision-label','本批后续实测结果 · '+(Object.hasOwn(outcomeLabels,outcome.status)?outcomeLabels[outcome.status]:'未记录')));
+    const iterations=Array.isArray(outcome.candidate_iterations)?outcome.candidate_iterations.filter(Number.isInteger):[];
+    result.append(decisionElement('pre','decision-copy','已提交候选：'+(Number.isInteger(outcome.completed_candidates)?outcome.completed_candidates:'未记录')+'\n候选序号：'+(iterations.length?iterations.join('、'):'未记录')+'\n最优应力：'+num(outcome.best_stress_mpa,3)+' MPa\n历史最优应力改善：'+num(outcome.best_improvement_mpa,3)+' MPa\n相对基准应力降低：'+num(outcome.stress_reduction_percent,3)+' %\n近似面积变化：'+num(outcome.area_change_percent,3)+' %'));
+    result.append(decisionElement('div','decision-context','实测结果用于比较搜索表现，不构成对模型理由的因果验证。'));
+    grid.append(basis,result);card.append(grid);
+    const hypothesis=decisionElement('div','decision-hypothesis');
+    hypothesis.append(decisionElement('div','decision-label','模型中心与理由 · 搜索假设，未经因果验证'));
+    hypothesis.append(decisionElement('pre','decision-copy',entry.rationale||'无模型理由记录（初始取样可不调用模型）。'));
+    hypothesis.append(decisionElement('div','decision-context','候选生成方式：'+(entry.candidate_type||'未记录')+' · 搜索半径比例：'+(Number.isFinite(entry.sigma_fraction)?num(entry.sigma_fraction*100,2)+' %':'未记录')));
+    if(entry.center&&typeof entry.center==='object'){
+      const center=decisionElement('div','decision-center');
+      for(const name of ['X1','X2','X3','X4','X5','Y1','Y2','Y3','Y4'])center.append(decisionElement('span',null,name+' = '+num(entry.center[name],4)));
+      hypothesis.append(center);
+    }else hypothesis.append(decisionElement('div','decision-context','无中心记录。'));
+    if(entry.request_status==='reused_plan')hypothesis.append(decisionElement('div','decision-context','本条复用已保存计划；显示原计划的中心与理由，不表示重新调用模型或生成了新反馈。'));
+    card.append(hypothesis);
+    const provenance=decisionElement('details','decision-provenance');
+    provenance.append(decisionElement('summary',null,'追溯文件与签名'));
+    provenance.append(decisionElement('pre',null,'计划文件：'+(entry.plan_file||'未记录')+'\n计划签名：'+(entry.plan_signature||'未记录')+'\n反馈文件：'+(entry.feedback_file||'无')+'\nAPI 尝试目录：'+(entry.api_attempt_directory||'未记录')+'\n记录时间：'+(entry.recorded_at||'未记录')));
+    card.append(provenance);container.append(card);
+  }
+}
+function renderParameters(best){const fragment=document.createDocumentFragment();for(const name of ['X1','X2','X3','X4','X5','Y1','Y2','Y3','Y4']){const item=document.createElement('div');item.className='parameter';const label=document.createElement('span');label.textContent=name;const value=document.createElement('strong');value.textContent=num(best?.parameters?.[name],4);item.append(label,value);fragment.append(item)}$('best-parameters').replaceChildren(fragment)}
+function plot(data){const points=[];if(data?.baseline)points.push(data.baseline);for(const point of data?.candidates||[])points.push(point);const valid=points.filter(p=>Number.isFinite(p.iteration)&&Number.isFinite(p.stress_mpa));const container=$('chart');container.replaceChildren();if(!valid.length){const empty=document.createElement('div');empty.className='empty';empty.textContent='完成基准和候选评价后显示应力曲线';container.append(empty);return}const ns='http://www.w3.org/2000/svg';const svg=document.createElementNS(ns,'svg');svg.setAttribute('viewBox','0 0 760 205');svg.setAttribute('role','img');svg.setAttribute('aria-label','已提交样本最大等效应力与历史最优曲线');const make=(tag,attrs,value)=>{const el=document.createElementNS(ns,tag);for(const [k,v]of Object.entries(attrs))el.setAttribute(k,String(v));if(value!=null)el.textContent=value;svg.append(el);return el};const min=Math.min(...valid.map(p=>p.stress_mpa));const max=Math.max(...valid.map(p=>p.stress_mpa));const pad=Math.max((max-min)*.15,1);const low=min-pad,high=max+pad;const xmax=Math.max(...valid.map(p=>p.iteration),1);const x=v=>58+v/xmax*677,y=v=>168-(v-low)/(high-low)*143;for(let i=0;i<4;i++){const value=low+(high-low)*i/3;make('line',{x1:58,x2:735,y1:y(value),y2:y(value),stroke:'#e6ecf3'});make('text',{x:48,y:y(value)+4,'text-anchor':'end',fill:'#8192a3','font-size':10},num(value,1))}for(const v of [...new Set([0,Math.round(xmax/2),xmax])])make('text',{x:x(v),y:191,'text-anchor':'middle',fill:'#8192a3','font-size':10},String(v));let best=Infinity;const line=valid.map(p=>[x(p.iteration),y(p.stress_mpa)].join(',')).join(' ');const bestline=valid.map(p=>{best=Math.min(best,p.stress_mpa);return[x(p.iteration),y(best)].join(',')}).join(' ');make('polyline',{points:line,fill:'none',stroke:'#2864dc','stroke-width':2.3,'stroke-linejoin':'round'});make('polyline',{points:bestline,fill:'none',stroke:'#2a9873','stroke-width':1.8,'stroke-dasharray':'5 5'});for(const p of valid)make('circle',{cx:x(p.iteration),cy:y(p.stress_mpa),r:3.5,fill:'#2864dc',stroke:'white','stroke-width':1.5});container.append(svg)}
+function render(detail,kind,id){const d=detail.data||{};const wf=d.state||{};const run=d.run_snapshot?.ok?d.run_snapshot.data:null;const analysis=kind==='run'?(detail.ok?d:null):(d.analysis||null);const best=analysis?.best||run?.best;const done=run?.completed_candidates??d.completed_candidates??analysis?.completed_candidates??wf.start_completed_candidates??0;const target=wf.target_total_candidates??d.target_total_candidates??analysis?.target_total_candidates;const status=kind==='run'?(detail.ok?(analysis?.run_status||'analyzed'):'failed'):(wf.status||d.workflow_status||detail.status);text('detail-title',kind==='run'?'已有运行 · 结果分析':(wf.request_text||'工作流详情'));text('detail-id',id+(d.run_id&&kind==='workflow'?'  /  '+d.run_id:''));badge(status);text('candidate-count',String(done)+(target!=null?' / '+target:''));text('best-stress',num(best?.stress_mpa,2));text('improvement',num(best?.stress_reduction_from_baseline_percent??best?.reduction_percent,2));text('area-change',num(best?.approximate_area_change_from_baseline_percent,2));$('progress').style.width=target?Math.max(0,Math.min(100,done/target*100))+'%':'0%';text('progress-text',target!=null?'已提交 '+done+' 个候选，目标 '+target+' 个':'尚未绑定候选预算');text('run-status',(run?.run_status||analysis?.run_status)?'引擎：'+(labels[run?.run_status||analysis?.run_status]||run?.run_status||analysis?.run_status):'');text('analysis-basis',analysis?'分析基于已提交记录；计算中可能显示上一批分析。':'尚无批次分析，进度来自当前已提交的控制器状态。');text('summary',analysis?.summary_zh||'');const runError=analysis?.last_error&&['failed','interrupted'].includes(analysis.run_status)?{code:analysis.last_error.type,message:analysis.last_error.message}:null;const err=wf.error||(!detail.ok?detail.error:null)||(!d.run_snapshot?.ok?d.run_snapshot?.error:null)||runError;text('error-detail',err?(err.code+': '+err.message):'');$('resume-actions').classList.toggle('hidden',kind!=='workflow'||wf.status==='completed'||wf.text_plan_only||!wf.task);text('task-json',JSON.stringify(d.task||wf.task||{},null,2));const costs=analysis?.costs?.llm;text('http-attempts',costs?.observed_http_attempts??'未知');text('tokens',costs?.total_tokens!=null?num(costs.total_tokens,0):'未知');text('cost-coverage',costs?.token_accounting_status||'尚无成本分析');const ev=analysis?.evidence;text('verification',ev?.native_records_reverified?'已复核已提交记录':analysis?'本次只读浏览未重新复核':'尚无分析');text('warnings',(detail.warnings||[]).join('\n'));renderParameters(best);plot(analysis);renderDecisions(wf,kind);preparePredictionRun(kind==='run'?id:(d.run_id||wf.run_id||null));const active={planning:0,received:0,planned:0,validating:1,validated:1,checking:1,running:2,analyzing:3,completed:4}[status];[...$('steps').querySelectorAll('span')].forEach((el,i)=>el.classList.toggle('active',i===active))}
+async function refresh(){if(state.refreshing){state.refreshQueued=true;return;}state.refreshing=true;try{const [flows,runs]=await Promise.all([api('/api/workflows'),api('/api/runs')]);showList('workflows',flows.workflows||[],'workflow');showList('runs',runs.runs||[],'run');const selectedContext=$('context').value;const fragment=document.createDocumentFragment();const initial=document.createElement('option');initial.value='';initial.textContent='新任务 / 按文字指定';fragment.append(initial);for(const run of runs.runs||[]){const option=document.createElement('option');option.value=run.run_id;option.textContent=run.run_id;fragment.append(option)}$('context').replaceChildren(fragment);$('context').value=selectedContext;if(!state.job&&flows.active_job_id)state.job=flows.active_job_id;if(state.job){const result=await api('/api/jobs/'+encodeURIComponent(state.job));const job=result.job;if(job.status==='completed'){busy(false);state.job=null;const r=job.result||{};if(job.workflow_id){state.kind='workflow';state.selected=job.workflow_id;if(state.pendingPreview&&r.ok){state.lastPreview=job.workflow_id;state.previewSignature=state.pendingSignature}}state.pendingPreview=false;const wfStatus=r.data?.state?.status||r.data?.workflow_status||r.status;if(!r.ok){message(r.error?.message||'任务未成功，请查看工作流记录。',true)}else if(['validated','planned'].includes(r.status)){message(wfStatus==='planned'?'任务单已保存。请求包含只规划指令时，将保持不执行。':'任务已校验，尚未真实计算。可以继续执行同一工作流。')}else{message('本次操作已完成，结果以工作流与已提交记录为准。')}}else{busy(true);if(job.workflow_id&&state.jobFocused!==job.job_id){state.kind='workflow';state.selected=job.workflow_id;state.reportKey=null;state.jobFocused=job.job_id;}message('后台任务执行中 · '+(job.workflow_id||job.job_id))}}else busy(!!flows.active_job_id);if(!state.selected&&(flows.workflows||[]).length){state.kind='workflow';state.selected=flows.workflows[0].workflow_id}if(state.selected){const path=state.kind==='workflow'?'/api/workflows/'+encodeURIComponent(state.selected):'/api/runs/'+encodeURIComponent(state.selected)+'/analysis';const selectedId=state.selected,selectedKind=state.kind;const detail=await api(path);if(selectedId!==state.selected||selectedKind!==state.kind){state.refreshQueued=true;return;}render(detail,selectedKind,selectedId);if(state.kind==='workflow'&&detail.data?.report_file){const key=state.selected+':'+String(detail.data.state?.revision);if(key!==state.reportKey){const report=await api('/api/workflows/'+encodeURIComponent(selectedId)+'/report');if(state.selected===selectedId&&state.kind===selectedKind){text('report',report);state.reportKey=key}}}else{text('report',state.kind==='run'?'已有运行可查看结果与证据；工作流完成分析后生成报告。':'此工作流尚无已生成的结果报告。')}}text('connection','● 本地已连接')}catch(error){message(error.message,true);text('connection','● 连接或读取失败')}finally{state.refreshing=false;if(state.refreshQueued){state.refreshQueued=false;queueMicrotask(refresh);}}}
+$('preview').addEventListener('click',()=>submit(false));$('start').addEventListener('click',()=>submit(true));$('resume-preview').addEventListener('click',()=>resume(false));$('resume-live').addEventListener('click',()=>resume(true));$('refresh').addEventListener('click',refresh);for(const id of ['request','context','use-llm'])$(id).addEventListener('input',clearPreview);document.querySelectorAll('[data-example]').forEach(el=>el.addEventListener('click',()=>{$('request').value=el.dataset.example;clearPreview()}));document.querySelectorAll('[data-tab]').forEach(button=>button.addEventListener('click',()=>{document.querySelectorAll('[data-tab]').forEach(el=>el.classList.toggle('active',el===button));for(const key of ['results','feedback','predictions','task','report'])$('tab-'+key).classList.toggle('hidden',key!==button.dataset.tab);if(button.dataset.tab==='predictions')loadPredictions()}));$('refresh-predictions').addEventListener('click',loadPredictions);
+(async()=>{try{const config=await api('/api/config');state.token=config.csrf_token;state.job=config.active_job_id;await refresh();setInterval(refresh,3000)}catch(error){message(error.message,true);text('connection','● 无法连接本地服务')}})();
+</script>
+</body></html>

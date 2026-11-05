@@ -1,0 +1,6 @@
+{
+  "operation": "optimize",
+  "case_id": "disk_2d_current",
+  "run_id": "run_REPLACE_WITH_EXISTING_PYTHON_RUN",
+  "additional_candidate_budget": 20
+}

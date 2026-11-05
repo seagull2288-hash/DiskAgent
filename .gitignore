@@ -1,0 +1,67 @@
+# Python caches, environments and tooling
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+env/
+.vscode/
+.idea/
+
+# Machine-specific paths: copy the tracked example on a new checkout.
+/python_control/optimization_config.json
+
+# Credentials belong in the configured user environment variable.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+id_rsa
+id_ed25519
+**/credentials.json
+**/secrets.json
+**/config.*.local.json
+
+# Runtime history is retained on disk, outside Git history.
+/llm_runs/
+/python_llm_runs/
+/agent_workflows/
+/agent_plans/
+/agent_app_logs/
+
+# Transient logs, locks, temporary files and backups
+*.log
+*.lock
+*.lck
+*.pid
+*.tmp
+*.bak
+*.wbpj~
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Retain CAD and Workbench source databases; omit session/cache artefacts.
+/project_v2/**/session_files/
+/project_v2/**/.project_cache
+/project_v2/**/user_files/DesignPointLog.csv
+
+# Solver products that may later be created inside the Workbench project.
+/project_v2/**/*.rst
+/project_v2/**/*.rth
+/project_v2/**/*.full
+/project_v2/**/*.emat
+/project_v2/**/*.esav
+/project_v2/**/*.osav
+/project_v2/**/*.mode
+/project_v2/**/*.rdb
+/project_v2/**/*.ldhi
+/project_v2/**/*.db
+/project_v2/**/*.err
+/project_v2/**/*.out
+/project_v2/**/ds.dat

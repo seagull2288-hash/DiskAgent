@@ -1,0 +1,20 @@
+{
+  "strategy": "center_surrogate",
+  "seed": 20261029,
+  "initial_lhs": 0,
+  "batch_size": 4,
+  "pool_size": 32,
+  "sigma_start": 0.08,
+  "sigma_min": 0.02,
+  "sigma_decay": 0.9,
+  "global_fraction": 0.2,
+  "exploration_slots": 1,
+  "surrogate_min_samples": 24,
+  "surrogate_max_samples": 160,
+  "surrogate_folds": 4,
+  "surrogate_length_scales": [0.15, 0.35, 0.7],
+  "surrogate_max_cv_nrmse": 0.5,
+  "surrogate_max_rmse_mpa": 15.0,
+  "surrogate_uncertainty_weight": 1.5,
+  "surrogate_max_distance": 0.6
+}

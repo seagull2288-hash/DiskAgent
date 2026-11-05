@@ -1,0 +1,475 @@
+"""Recompute the authorized NX12 baseline in its already saved ASCII project.
+
+Run inside Mechanical through the fresh Workbench batch caller after Save As.
+The caller owns opening/saving the project. This script changes no geometry,
+material, boundary condition, scope, parameter definition, or mesh setting.
+It preserves an existing mesh and generates one only if there are no nodes.
+Uses the installed ANSYS 2020 R2 (v202) ACT API and IronPython 2 syntax.
+"""
+import json
+import math
+import re
+import traceback
+from System import DateTime
+from System.IO import Directory, File, FileInfo, Path
+from System.Text import UTF8Encoding
+
+BASE = __RUN_DIR__
+OUTPUT_ROOT = __PROJECT_ROOT__
+PROJECT_PATH = __PROJECT_FILE__
+REPORT_PATH = Path.Combine(BASE, "mechanical_verified.json")
+EXPECTED_X = __EXPECTED_X__
+EXPECTED_OUTER = 83.0 + sum(EXPECTED_X[:5])
+STRESS_NAME = "STRESS_Maximum_von_Mises"
+LOAD_NAMES = {
+    "Inner lower point Uy=0": "Displacement",
+    "Outer radial pressure -131.85 MPa": "Pressure",
+    "Rotation about global Y - 1349.3 rad per s": "RotationalVelocity"
+}
+HARMLESS_CATEGORIES = set([
+    "AnalysisSettings", "ANSYSAnalysisSettings", "Solution",
+    "Comment", "Figure", "Image"
+])
+GEOMETRY_TOLERANCE_MM = 0.005
+report = {
+    "success": False,
+    "stage": "preflight",
+    "started_utc": unicode(DateTime.UtcNow.ToString("o")),
+    "scope": "one authorized NX12 baseline solve in the saved ASCII project",
+    "expected_project_path": unicode(PROJECT_PATH),
+    "physics_mutations_requested": False,
+    "mesh_settings_mutations_requested": False,
+    "mesh_generation_requested": False,
+    "solve_requested": False,
+    "image_export_requested": False,
+    "project_save_requested": False,
+    "actual": {},
+    "warnings": []
+}
+
+
+def write_report():
+    # .NET receives Unicode directly. Do not pass Chinese messages through str().
+    if not Directory.Exists(BASE):
+        raise RuntimeError("The prepared repair workspace directory is missing")
+    File.WriteAllText(REPORT_PATH, json.dumps(report, ensure_ascii=False,
+                                            allow_nan=False, indent=2),
+                      UTF8Encoding(False))
+
+
+def progress(stage):
+    report["stage"] = stage
+    write_report()
+
+
+def finite(value, label, positive=False):
+    value = float(value)
+    if math.isnan(value) or math.isinf(value):
+        raise RuntimeError(label + " must be finite")
+    if positive and value <= 0:
+        raise RuntimeError(label + " must be positive")
+    return value
+
+
+def close(actual, expected, tolerance, label):
+    actual = finite(actual, label)
+    if abs(actual - expected) > tolerance:
+        raise RuntimeError(label + " differs from the authorized baseline: actual="
+                           + unicode(actual) + ", expected=" + unicode(expected))
+    return actual
+
+
+def category(obj):
+    return unicode(obj.DataModelObjectCategory)
+
+
+def unique(name, expected_category, parent=None):
+    matches = ExtAPI.DataModel.GetObjectsByName(name)
+    if matches.Count != 1:
+        raise RuntimeError("Expected exactly one existing object: " + name)
+    obj = matches[0]
+    if category(obj) != expected_category:
+        raise RuntimeError("Unexpected category for " + name + ": " + category(obj))
+    if parent is not None and int(obj.Parent.ObjectId) != int(parent.ObjectId):
+        raise RuntimeError("Unexpected parent for " + name)
+    return obj
+
+
+def resolved_ids(obj):
+    # v202 may return a NamedSelection object or resolved ISelectionInfo.
+    location = obj.Location
+    for depth in range(4):
+        if hasattr(location, "Ids"):
+            return sorted(int(value) for value in location.Ids)
+        if not hasattr(location, "Location"):
+            break
+        location = location.Location
+    raise RuntimeError("Cannot resolve the actual geometry scope of " + unicode(obj.Name))
+
+
+def verify_scope(obj, expected_ids):
+    actual = resolved_ids(obj)
+    expected = sorted(int(value) for value in expected_ids)
+    if actual != expected:
+        raise RuntimeError("Incorrect actual geometry scope on " + unicode(obj.Name)
+                           + ": " + unicode(actual) + ", expected=" + unicode(expected))
+    return actual
+
+
+def constant(output, unit, expected, label):
+    values = list(output.DiscreteValues)
+    if len(values) != 1:
+        raise RuntimeError("Expected exactly one constant value for " + label)
+    value = close(values[0].ConvertUnit(unit).Value, expected,
+                  max(0.000000001, abs(expected) * 0.0000000001), label)
+    return {"value": value, "unit": unit, "display": unicode(values[0])}
+
+
+def global_scope(obj, global_cs):
+    cs = obj.CoordinateSystem
+    if not bool(cs.IsGlobal) or int(cs.ObjectId) != int(global_cs.ObjectId):
+        raise RuntimeError("Expected the global coordinate system on " + unicode(obj.Name))
+    return {"object_id": int(cs.ObjectId), "name": unicode(cs.Name), "is_global": True}
+
+
+def message_snapshot():
+    items = []
+    for message in ExtAPI.Application.Messages:
+        timestamp = message.TimeStamp
+        try:
+            timestamp = unicode(timestamp.ToString("o"))
+        except Exception:
+            timestamp = unicode(timestamp)
+        items.append({"severity": unicode(message.Severity),
+                      "display": unicode(message.DisplayString),
+                      "timestamp": timestamp})
+    return items
+
+
+def new_messages(before, after):
+    # A multiset retains duplicate messages and distinguishes persisted stale errors.
+    counts = {}
+    for item in before:
+        key = (item["severity"], item["display"], item["timestamp"])
+        counts[key] = counts.get(key, 0) + 1
+    new = []
+    for item in after:
+        key = (item["severity"], item["display"], item["timestamp"])
+        if counts.get(key, 0) > 0:
+            counts[key] -= 1
+        else:
+            new.append(item)
+    return new
+
+
+def mesh_snapshot():
+    data = ExtAPI.DataModel.MeshDataByName("Global")
+    return {
+        "node_count": 0 if data is None else int(data.NodeCount),
+        "element_count": 0 if data is None else int(data.ElementCount),
+        "element_size": unicode(Model.Mesh.ElementSize),
+        "element_size_mm": finite(Model.Mesh.ElementSize.ConvertUnit("mm").Value,
+                                  "mesh element size mm"),
+        "element_order": unicode(Model.Mesh.ElementOrder),
+        "object_state": unicode(Model.Mesh.ObjectState)
+    }
+
+
+def assert_mesh_preserved(before, after, preserve_counts):
+    for name in ["element_size", "element_size_mm", "element_order"]:
+        if before[name] != after[name]:
+            raise RuntimeError("The existing mesh setting changed: " + name)
+    if after["node_count"] <= 0 or after["element_count"] <= 0:
+        raise RuntimeError("The mesh has no nodes or elements")
+    if preserve_counts:
+        for name in ["node_count", "element_count"]:
+            if before[name] != after[name]:
+                raise RuntimeError("The existing mesh count changed: " + name)
+
+
+def checked_working_dir(solution):
+    raw = unicode(solution.WorkingDir)
+    report["actual"]["reported_working_directory"] = raw
+    if not raw or any(ord(character) > 127 for character in raw) or "?" in raw:
+        raise RuntimeError("Mechanical WorkingDir must be a genuine ASCII path without fallback question marks")
+    full = unicode(Path.GetFullPath(raw)).rstrip("\\/")
+    root = unicode(Path.GetFullPath(OUTPUT_ROOT)).rstrip("\\/")
+    if not full.lower().startswith(root.lower() + "\\"):
+        raise RuntimeError("Mechanical WorkingDir is outside the authorized ASCII output project: " + full)
+    if not Directory.Exists(full):
+        raise RuntimeError("Mechanical WorkingDir does not exist: " + full)
+    return full
+
+
+def file_snapshot(path):
+    if not File.Exists(path):
+        return {"path": unicode(path), "exists": False}
+    info = FileInfo(path)
+    return {"path": unicode(path), "exists": True, "bytes": int(info.Length),
+            "last_modified_utc": unicode(info.LastWriteTimeUtc.ToString("o"))}
+
+
+def verify_baseline(analysis, solution):
+    if analysis.AnalysisType != AnalysisType.Static:
+        raise RuntimeError("Expected the existing static structural analysis")
+    geo_bodies = [body for assembly in ExtAPI.DataModel.GeoData.Assemblies
+                  for part in assembly.Parts for body in part.Bodies]
+    if len(geo_bodies) != 1 or len(geo_bodies[0].Faces) != 1 or len(geo_bodies[0].Edges) != 14:
+        raise RuntimeError("Expected one sheet body, one face, and fourteen edges")
+    geo = geo_bodies[0]
+    bodies = ExtAPI.DataModel.GetObjectsByType(DataModelObjectCategory.Body)
+    if bodies.Count != 1 or bool(bodies[0].Suppressed):
+        raise RuntimeError("Expected one unsuppressed Mechanical body")
+    body = bodies[0]
+    if body.Dimension != ShellBodyDimension.Two_D or body.GeometryType != GeometryType.Surface:
+        raise RuntimeError("The body must be a genuine native 2D surface body")
+    if Model.Geometry.Model2DBehavior != Model2DBehavior.AxiSymmetric:
+        raise RuntimeError("The existing model must be axisymmetric")
+    if unicode(body.Material) != u"Structural Steel":
+        raise RuntimeError("The existing material must be Structural Steel")
+
+    vertices = dict((int(v.Id), v) for edge in geo.Edges for v in edge.Vertices)
+    if not vertices:
+        raise RuntimeError("No boundary vertices")
+    for vertex in vertices.values():
+        close(vertex.Z * 1000.0, 0.0, GEOMETRY_TOLERANCE_MM, "boundary vertex Z mm")
+    xmin = min(finite(v.X * 1000.0, "boundary X mm") for v in vertices.values())
+    xmax = max(finite(v.X * 1000.0, "boundary X mm") for v in vertices.values())
+    close(xmin, 83.0, GEOMETRY_TOLERANCE_MM, "minimum radius mm")
+    close(xmax, EXPECTED_OUTER, GEOMETRY_TOLERANCE_MM, "maximum radius mm")
+    inner = [v for v in vertices.values() if abs(v.X * 1000.0 - xmin) <= GEOMETRY_TOLERANCE_MM]
+    ymin = min(finite(v.Y * 1000.0, "inner boundary Y mm") for v in inner)
+    close(ymin, -EXPECTED_X[5], GEOMETRY_TOLERANCE_MM, "support Y mm")
+    support_vertices = [v for v in inner if abs(v.Y * 1000.0 - ymin) <= GEOMETRY_TOLERANCE_MM]
+    outer_edges = [edge for edge in geo.Edges if len(edge.Vertices) == 2
+                   and all(abs(v.X * 1000.0 - EXPECTED_OUTER) <= GEOMETRY_TOLERANCE_MM
+                           for v in edge.Vertices)]
+    if len(support_vertices) != 1 or len(outer_edges) != 2:
+        raise RuntimeError("Expected one inner lower support vertex and two right pressure edges")
+    pressure_length = close(sum(finite(edge.Length, "pressure edge length")
+                                for edge in outer_edges) * 1000.0,
+                            2.0 * EXPECTED_X[8], GEOMETRY_TOLERANCE_MM, "total pressure edge length mm")
+    disk_ids = [int(geo.Id)]
+    support_ids = [int(support_vertices[0].Id)]
+    pressure_ids = sorted(int(edge.Id) for edge in outer_edges)
+    named_selections = {}
+    for name, ids in [("DISK_BODY", disk_ids), ("INNER_LOWER_UY_POINT", support_ids),
+                      ("OUTER_PRESSURE_EDGES", pressure_ids)]:
+        ns = unique(name, "NamedSelection")
+        named_selections[name] = {"object_id": int(ns.ObjectId), "ids": verify_scope(ns, ids)}
+
+    children = []
+    actual_loads = []
+    for child in analysis.Children:
+        item = {"name": unicode(child.Name), "category": category(child),
+                "object_id": int(child.ObjectId)}
+        children.append(item)
+        if category(child) in HARMLESS_CATEGORIES:
+            continue
+        if unicode(child.Name) not in LOAD_NAMES or category(child) != LOAD_NAMES[unicode(child.Name)]:
+            raise RuntimeError("Unexpected existing analysis child: " + unicode(child.Name)
+                               + " (" + category(child) + ")")
+        actual_loads.append(child)
+    if len(actual_loads) != 3 or set(unicode(obj.Name) for obj in actual_loads) != set(LOAD_NAMES.keys()):
+        raise RuntimeError("Expected exactly the three known baseline boundary conditions")
+
+    support = unique("Inner lower point Uy=0", "Displacement", analysis)
+    pressure = unique("Outer radial pressure -131.85 MPa", "Pressure", analysis)
+    rotation = unique("Rotation about global Y - 1349.3 rad per s", "RotationalVelocity", analysis)
+    global_candidates = [cs for cs in Model.CoordinateSystems.Children if bool(cs.IsGlobal)]
+    if len(global_candidates) != 1:
+        raise RuntimeError("Expected one genuine global coordinate system")
+    global_cs = global_candidates[0]
+    for load in [support, pressure, rotation]:
+        if bool(load.Suppressed):
+            raise RuntimeError("Required boundary condition is suppressed: " + unicode(load.Name))
+    if support.DefineBy != LoadDefineBy.Components or rotation.DefineBy != LoadDefineBy.Components:
+        raise RuntimeError("Support and rotation must retain their component definitions")
+    if unicode(support.XComponent.Output.DefinitionType) != u"Free":
+        raise RuntimeError("The support radial X component must remain free")
+    if pressure.DefineBy != LoadDefineBy.NormalToOrTangential:
+        raise RuntimeError("The pressure must retain its normal-to-boundary definition")
+
+    stress = unique(STRESS_NAME, "EquivalentStress", solution)
+    if bool(stress.Suppressed):
+        raise RuntimeError("The existing stress result is suppressed")
+    maximum_parameter = stress.GetParameter("Maximum")
+    if maximum_parameter is None:
+        raise RuntimeError("The existing stress Maximum output parameter is missing")
+    # Verify all six station locations and four upper heights, not just P-input readback.
+    stations = [83.0]
+    for span in EXPECTED_X[:5]:
+        stations.append(stations[-1] + span)
+    heights = [EXPECTED_X[5], EXPECTED_X[5], EXPECTED_X[6], EXPECTED_X[7], EXPECTED_X[8], EXPECTED_X[8]]
+    station_readback = []
+    for station, height in zip(stations, heights):
+        near = [v for v in vertices.values() if abs(v.X * 1000.0 - station) <= GEOMETRY_TOLERANCE_MM]
+        if not near:
+            raise RuntimeError("Missing requested geometry station " + unicode(station))
+        actual_height = max(v.Y * 1000.0 for v in near)
+        close(actual_height, height, GEOMETRY_TOLERANCE_MM, "station upper height")
+        station_readback.append({"x_mm": station, "upper_height_mm": actual_height})
+    state = {"station_readback": station_readback,
+        "analysis_name": unicode(analysis.Name), "analysis_type": unicode(analysis.AnalysisType),
+        "body_dimension": unicode(body.Dimension), "geometry_type": unicode(body.GeometryType),
+        "model_2d_behavior": unicode(Model.Geometry.Model2DBehavior), "material": unicode(body.Material),
+        "geometry": {"body_id": int(geo.Id), "body_count": 1, "face_count": 1, "edge_count": 14,
+                     "vertex_count": len(vertices), "minimum_radius_mm": xmin, "maximum_radius_mm": xmax,
+                     "support_point_mm": [support_vertices[0].X * 1000.0,
+                                          support_vertices[0].Y * 1000.0,
+                                          support_vertices[0].Z * 1000.0],
+                     "pressure_edge_ids": pressure_ids, "total_pressure_edge_length_mm": pressure_length},
+        "named_selections": named_selections,
+        "analysis_children": children,
+        "boundary_condition_count": len(actual_loads),
+        "boundary_conditions": {
+            "support": {"object_id": int(support.ObjectId), "scope_ids": verify_scope(support, support_ids),
+                        "coordinate_system": global_scope(support, global_cs), "radial_x_definition": u"Free",
+                        "axial_y": constant(support.YComponent.Output, "mm", 0.0, "support UY")},
+            "pressure": {"object_id": int(pressure.ObjectId), "scope_ids": verify_scope(pressure, pressure_ids),
+                         "define_by": unicode(pressure.DefineBy),
+                         "magnitude": constant(pressure.Magnitude.Output, "MPa", -131.85, "pressure")},
+            "rotation": {"object_id": int(rotation.ObjectId), "scope_ids": verify_scope(rotation, disk_ids),
+                         "coordinate_system": global_scope(rotation, global_cs),
+                         "x": constant(rotation.XComponent.Output, "rad s^-1", 0.0, "rotation X"),
+                         "y": constant(rotation.YComponent.Output, "rad s^-1", 1349.3, "rotation Y"),
+                         "z": constant(rotation.ZComponent.Output, "rad s^-1", 0.0, "rotation Z")}},
+        "stress_result": {"object_id": int(stress.ObjectId), "name": unicode(stress.Name),
+                          "scope_ids": verify_scope(stress, disk_ids), "maximum_parameter_exists": True}
+    }
+    return state, stress
+
+
+try:
+    # Enum members and solve actions were checked in the installed v202 XML:
+    # Ansys.Mechanical.DataModel.xml / Ansys.ACT.WB1.xml (Solution.Status, etc.).
+    from Ansys.Mechanical.DataModel.Enums import (
+        AnalysisType, DataModelObjectCategory, GeometryType, LoadDefineBy,
+        Model2DBehavior, ObjectState, ShellBodyDimension, SolutionStatusType)
+    progress("preflight")
+    if not File.Exists(PROJECT_PATH):
+        raise RuntimeError("The caller must first save the authorized ASCII project")
+    if len(Model.Analyses) != 1:
+        raise RuntimeError("Expected exactly one existing static structural analysis")
+    analysis = Model.Analyses[0]
+    solution = analysis.Solution
+    report["actual"]["messages_before"] = message_snapshot()
+    report["actual"]["status_before"] = unicode(solution.Status)
+    report["actual"]["object_states_before"] = {"solution": unicode(solution.ObjectState)}
+    report["actual"]["mesh_before"] = mesh_snapshot()
+    working_dir = checked_working_dir(solution)
+    report["actual"]["working_directory_before"] = working_dir
+    result_path = Path.Combine(working_dir, "file.rst")
+    report["actual"]["result_file_before"] = file_snapshot(result_path)
+    baseline_before, stress = verify_baseline(analysis, solution)
+    report["actual"]["baseline_before"] = baseline_before
+    report["actual"]["object_states_before"]["stress"] = unicode(stress.ObjectState)
+    progress("preflight_verified")
+
+    mesh_before = report["actual"]["mesh_before"]
+    preserve_counts = mesh_before["node_count"] > 0
+    if preserve_counts:
+        if mesh_before["element_count"] <= 0:
+            raise RuntimeError("The existing mesh has nodes but no elements")
+        report["actual"]["mesh_action"] = "preserved_existing_mesh"
+    else:
+        report["mesh_generation_requested"] = True
+        report["actual"]["mesh_action"] = "generated_only_because_no_mesh_nodes_exist"
+        progress("generate_missing_mesh")
+        Model.Mesh.GenerateMesh()
+    mesh_ready = mesh_snapshot()
+    report["actual"]["mesh_ready"] = mesh_ready
+    assert_mesh_preserved(mesh_before, mesh_ready, preserve_counts)
+
+    progress("clear_generated_solution_data")
+    solution.ClearGeneratedData()
+    report["actual"]["cached_generated_data_cleared"] = True
+    report["actual"]["result_file_after_clear"] = file_snapshot(result_path)
+    assert_mesh_preserved(mesh_ready, mesh_snapshot(), True)
+    if checked_working_dir(solution).lower() != working_dir.lower():
+        raise RuntimeError("Mechanical WorkingDir changed after clearing the solution")
+
+    report["solve_requested"] = True
+    progress("solve")
+    solve_started = DateTime.UtcNow
+    report["actual"]["solve_started_utc"] = unicode(solve_started.ToString("o"))
+    write_report()
+    solution.Solve(True)
+    report["actual"]["solve_returned_utc"] = unicode(DateTime.UtcNow.ToString("o"))
+    progress("evaluate_existing_results")
+    solution.EvaluateAllResults()
+
+    progress("verify_fresh_solution")
+    report["actual"]["status_after"] = unicode(solution.Status)
+    report["actual"]["object_states_after"] = {
+        "solution": unicode(solution.ObjectState), "stress": unicode(stress.ObjectState)}
+    report["actual"]["mesh_after"] = mesh_snapshot()
+    report["actual"]["working_directory_after"] = checked_working_dir(solution)
+    report["actual"]["result_file_after"] = file_snapshot(result_path)
+    report["actual"]["messages_after"] = message_snapshot()
+    report["actual"]["new_messages"] = new_messages(report["actual"]["messages_before"],
+                                                    report["actual"]["messages_after"])
+    report["actual"]["new_error_messages"] = [item for item in report["actual"]["new_messages"]
+                                               if item["severity"] == u"Error"]
+    report["warnings"] = [item for item in report["actual"]["new_messages"]
+                           if item["severity"] == u"Warning"]
+    report["actual"]["old_error_message_count"] = sum(
+        1 for item in report["actual"]["messages_before"] if item["severity"] == u"Error")
+    if solution.Status != SolutionStatusType.Done:
+        raise RuntimeError("The new native solution status is not Done")
+    if any(obj.ObjectState != ObjectState.Solved for obj in [solution, stress]):
+        raise RuntimeError("The new solution and stress result must both be Solved")
+    if report["actual"]["working_directory_after"].lower() != working_dir.lower():
+        raise RuntimeError("The new solve changed Mechanical WorkingDir")
+    assert_mesh_preserved(mesh_ready, report["actual"]["mesh_after"], True)
+    if not File.Exists(result_path):
+        raise RuntimeError("The new native working-directory file.rst is missing")
+    result_info = FileInfo(result_path)
+    if result_info.Length <= 0:
+        raise RuntimeError("The new native file.rst is empty")
+    if result_info.LastWriteTimeUtc <= solve_started:
+        raise RuntimeError("file.rst does not postdate this solve; stale results are not accepted")
+    report["actual"]["result_file_after"]["fresh_for_this_solve"] = True
+
+    report["stress_MPa"] = finite(stress.Maximum.ConvertUnit("MPa").Value,
+                                  "maximum von-Mises stress MPa", True)
+    report["actual"]["stress_maximum"] = {
+        "MPa": report["stress_MPa"], "display": unicode(stress.Maximum),
+        "display_option": unicode(stress.DisplayOption),
+        "maximum_parameter_exists": stress.GetParameter("Maximum") is not None}
+    if not report["actual"]["stress_maximum"]["maximum_parameter_exists"]:
+        raise RuntimeError("The existing stress Maximum output parameter disappeared")
+    baseline_after, unused_stress = verify_baseline(analysis, solution)
+    report["actual"]["baseline_after"] = baseline_after
+    if baseline_before != baseline_after:
+        raise RuntimeError("The verified baseline physics or geometry changed during the solve")
+
+    solver_path = Path.Combine(working_dir, "solve.out")
+    report["actual"]["solver_output"] = file_snapshot(solver_path)
+    if File.Exists(solver_path):
+        solver_info = FileInfo(solver_path)
+        if solver_info.LastWriteTimeUtc <= solve_started:
+            raise RuntimeError("The working-directory solve.out does not postdate this solve")
+        solver_text = unicode(File.ReadAllText(solver_path))
+        error_banners = len(re.findall(r"\*{3}\s*ERROR\s*\*{3}", solver_text, re.IGNORECASE))
+        report["actual"]["solver_output"]["fresh_for_this_solve"] = True
+        report["actual"]["solver_output"]["error_banner_count"] = error_banners
+        if error_banners:
+            raise RuntimeError("The new native solver output contains an error banner")
+    if report["actual"]["new_error_messages"]:
+        raise RuntimeError("Mechanical reported a new error during this repair solve")
+    report["success"] = True
+    report["stage"] = "complete"
+except Exception as error:
+    report["error"] = unicode(error)
+    report["traceback"] = unicode(traceback.format_exc())
+    try:
+        after_messages = message_snapshot()
+        report["actual"]["messages_at_failure"] = after_messages
+        if "messages_before" in report["actual"]:
+            report["actual"]["new_messages"] = new_messages(report["actual"]["messages_before"], after_messages)
+    except Exception as message_error:
+        report["actual"]["message_capture_error"] = unicode(message_error)
+finally:
+    report["finished_utc"] = unicode(DateTime.UtcNow.ToString("o"))
+    write_report()

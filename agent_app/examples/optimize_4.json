@@ -1,0 +1,6 @@
+{
+  "operation": "optimize",
+  "case_id": "disk_2d_current",
+  "objective": "minimize_maximum_von_mises_stress",
+  "total_candidate_budget": 4
+}

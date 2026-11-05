@@ -1,0 +1,11 @@
+{
+  "candidate_count": 10,
+  "project_file": "project_v2/2dmodel.wbpj",
+  "workbench_executable": "C:/Program Files/ANSYS Inc/v202/Framework/bin/Win64/RunWB2.exe",
+  "output_root": "python_llm_runs",
+  "progress_log": "python_optimization.log",
+  "api_config": "api_bridge/config.deepseek.json",
+  "problem_file": "api_bridge/problem.json",
+  "key_environment_variable": "Deepseek_KEYS1",
+  "plot_on_complete": true
+}

@@ -1,0 +1,8 @@
+# Runtime and workflow compatibility use SHA256 of raw file bytes.
+# Preserve all current line endings, including mixed endings. Text diffs remain
+# available: -text disables newline conversion, unlike the "binary" macro.
+* -text
+
+*.prt -diff
+*.mechdb -diff
+*.agdb -diff

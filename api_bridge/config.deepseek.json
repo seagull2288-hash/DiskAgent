@@ -1,0 +1,19 @@
+{
+  "provider": "openai_chat",
+  "base_url": "https://api.deepseek.com",
+  "model": "deepseek-flash",
+  "api_key_env": "DEEPSEEK_API_KEY",
+  "timeout_seconds": 180,
+  "max_http_attempts": 2,
+  "max_proposal_attempts": 2,
+  "retry_delay_seconds": 1,
+  "max_retry_delay_seconds": 10,
+  "max_output_tokens": 4096,
+  "json_mode": true,
+  "chat_token_field": "max_tokens",
+  "anthropic_version": "2023-06-01",
+  "anthropic_workspace_id": "",
+  "history_compatibility_confirmed": true,
+  "history_prompt_limit": 20,
+  "offline_seed": 42
+}
