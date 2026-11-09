@@ -8,8 +8,6 @@ import math
 from pathlib import Path
 import subprocess
 import sys
-import time
-import uuid
 
 from .runtime import ControllerError, bridge, read_json, write_json
 from .journal import POLICY, create as create_journal
@@ -97,6 +95,34 @@ def verify_native(detail, baseline=None):
         value = bridge.finite_number(native.get(native_key), native_key)
         if value < 0 or abs(value-detail[detail_key]) > max(1e-8, abs(value)*1e-10):
             raise ControllerError('Native result and recorded result disagree: ' + native_key)
+    for metric in ('mass_kg', 'frequency_hz'):
+        if metric not in detail:
+            continue
+        value = bridge.finite_number(native.get(metric), metric)
+        evidence = native.get('metric_evidence', {}).get(metric, {})
+        if value <= 0 or abs(value - detail[metric]) > max(1e-9, value * 1e-9):
+            raise ControllerError('Native metric differs from committed observation: ' + metric)
+        if metric == 'mass_kg' and (evidence.get('unit') != 'kg' or evidence.get('scope') != 'full_axisymmetric_disk'):
+            raise ControllerError('Native mass requires kg and an explicit full-disk scope.')
+        if metric == 'frequency_hz' and (evidence.get('unit') != 'Hz' or evidence.get('fresh_for_this_solve') is not True):
+            raise ControllerError('Modal frequency requires fresh native evidence in Hz.')
+    if 'modal_frequencies_hz' in detail or 'modal_frequencies_hz' in native:
+        frequencies = detail.get('modal_frequencies_hz')
+        original = native.get('modal_frequencies_hz')
+        evidence = native.get('metric_evidence', {}).get('modal_frequencies_hz', {})
+        if (not isinstance(frequencies, list) or not isinstance(original, list)
+                or len(frequencies) != 6 or len(original) != 6
+                or evidence.get('mode_indices') != list(range(1, 7))
+                or evidence.get('unit') != 'Hz' or evidence.get('fresh_for_this_solve') is not True):
+            raise ControllerError('Six modal frequencies require ordered fresh native evidence in Hz.')
+        for measured, saved in zip(original, frequencies):
+            value = bridge.finite_number(measured, 'modal frequency')
+            recorded = bridge.finite_number(saved, 'recorded modal frequency')
+            if value <= 0 or abs(value - recorded) > max(1e-9, value * 1e-9):
+                raise ControllerError('Native modal frequency vector differs from its record.')
+        selected = native.get('metric_evidence', {}).get('frequency_hz', {}).get('mode_index')
+        if type(selected) is not int or not 1 <= selected <= 6 or abs(frequencies[selected - 1] - detail['frequency_hz']) > 1e-8:
+            raise ControllerError('Selected frequency differs from its recorded modal order.')
     x = detail['xActual']
     if abs(approximate_area(x)-detail['area']) > 1e-9:
         raise ControllerError('Section area does not match the actual dimensions.')
@@ -164,43 +190,99 @@ def collect_result(run_dir, x, problem, baseline=None):
         detail['resultSource'] = 'Fresh Workbench update, checked and read through native Mechanical API'
     cached = detail['workbenchCachedStressMPa']
     detail['workbenchCsvAgreesWithNative'] = cached is not None and abs(cached-detail['stressMPa']) < 1e-5
+    for metric in ('mass_kg', 'frequency_hz'):
+        if metric in native:
+            detail[metric] = bridge.finite_number(native[metric], metric)
+    if 'modal_frequencies_hz' in native:
+        detail['modal_frequencies_hz'] = native['modal_frequencies_hz']
+    if 'metric_evidence' in native:
+        detail['metric_evidence'] = native['metric_evidence']
     verify_native(detail, baseline)
+    from .engineering_checks import result_diagnostics
+    detail['engineering_checks'] = result_diagnostics(detail, native=native, baseline=baseline)
     return detail
 
 
-def evaluate(x, settings, problem, output_root, baseline=None):
+def evaluate(x, settings, problem, output_root, baseline=None, *, mesh_size_mm=None, evaluation_dir=None):
     x = canonical_x(x, problem)
+    from .engineering_checks import require_geometry
+    geometry = require_geometry(x, problem)
     if sys.platform != 'win32':
         raise ControllerError('The installed Workbench interface requires Windows.')
-    project_unlocked(settings.project_file)
+    if mesh_size_mm is not None and not settings.project_file.resolve().is_relative_to(settings.output_root.resolve()):
+        raise ControllerError('Mesh convergence evaluation requires an independent project under the run directory.')
     output_root = Path(output_root).resolve()
     project_root = settings.project_file.parent.resolve()
     if output_root == project_root or output_root.is_relative_to(project_root) or project_root.is_relative_to(output_root):
         raise ControllerError('Evaluation folders must not overlap the Workbench project folder.')
-    run_dir = output_root / ('eval_' + uuid.uuid4().hex)
-    run_dir.mkdir(parents=True, exist_ok=False)
-    write_json(run_dir / 'evaluation_request.json', {'x': x, 'project': str(settings.project_file)})
-    create_journal(settings.root, x, run_dir / 'evaluate.wbjn', run_dir / 'result.csv', run_dir / 'complete.ok')
+    from .evaluation_lifecycle import (evaluation_signature, prepare_attempt, read_optional,
+                                       update_monitor, utc_now, wait_for_process)
+    request = {'x': x, 'project': str(settings.project_file),
+               'case_signature': evaluation_signature(settings, problem, mesh_size_mm)}
+    run_dir, recovered = prepare_attempt(output_root, evaluation_dir, request)
+    if recovered:
+        detail = collect_result(run_dir, x, problem, baseline)
+        previous = read_optional(run_dir / 'evaluation.json')
+        detail.update(projectFile=str(settings.project_file), elapsedSeconds=previous.get('elapsedSeconds', 0),
+                      exitCode=0, stopRequested=False, recoveredCompletedEvaluation=True,
+                      recovered_utc=utc_now(), geometry_checks=geometry)
+        warning = update_monitor(run_dir, status='completed', message='已核验并回收此前完成的求解结果。')
+        if warning:
+            detail['monitor_warning'] = warning
+        write_json(run_dir / 'evaluation.json', detail)
+        return detail
+    project_unlocked(settings.project_file)
+    write_json(run_dir / 'geometry_precheck.json', geometry)
+    journal_options = {}
+    if settings.project_file == settings.root / 'project_modal' / '2dmodel.wbpj' or mesh_size_mm is not None:
+        journal_options['project_file'] = settings.project_file
+    create_journal(settings.root, x, run_dir / 'evaluate.wbjn', run_dir / 'result.csv', run_dir / 'complete.ok', **journal_options)
+    if getattr(settings, 'optimization_policy', None) is not None:
+        from .native_metrics import extend
+        extend(run_dir / 'evaluate.wbjn', settings.optimization_policy)
+    if mesh_size_mm is not None:
+        from .native_metrics import prepare_mesh_study
+        prepare_mesh_study(run_dir / 'evaluate.wbjn', mesh_size_mm)
     project_unlocked(settings.project_file)
     command = [str(settings.workbench_executable), '-F', str(settings.project_file), '-B', '-R', str(run_dir / 'evaluate.wbjn')]
-    started = time.monotonic()
-    stop_requested = False
+    # The launch reservation is durable before process creation. An uncertain
+    # launch is inspected on resume instead of silently creating another solve.
+    write_json(run_dir / 'process.json', {'state': 'starting', 'started_utc': utc_now()})
     # A dedicated process group prevents Ctrl+C from interrupting Workbench midway
     # through project updates. Finish and record this solve, then stop the loop.
     with (run_dir / 'workbench.log').open('wb') as log:
-        process = subprocess.Popen(command, stdout=log, stderr=subprocess.STDOUT,
-                                   cwd=str(settings.root), creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
-        while True:
-            try:
-                exit_code = process.wait()
-                break
-            except KeyboardInterrupt:
-                stop_requested = True
-                print('STOP requested: waiting for the active Workbench solve; its result will be saved first.', flush=True)
+        try:
+            process = subprocess.Popen(command, stdout=log, stderr=subprocess.STDOUT,
+                                       cwd=str(settings.root), creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
+        except OSError:
+            write_json(run_dir / 'process.json', {'state': 'not_started'})
+            raise
+        exit_code, stop_requested, elapsed = wait_for_process(process, run_dir, request['case_signature'])
     if exit_code:
-        raise ControllerError('Workbench failed with exit code %d. Inspect %s' % (exit_code, run_dir / 'workbench.log'))
-    detail = collect_result(run_dir, x, problem, baseline)
-    detail.update(projectFile=str(settings.project_file), elapsedSeconds=time.monotonic()-started,
-                  exitCode=exit_code, stopRequested=stop_requested)
+        message = 'Workbench failed with exit code %d.' % exit_code
+        report_path = run_dir / 'mechanical_verified.json'
+        try:
+            report = read_json(report_path) if report_path.is_file() else None
+        except (OSError, ValueError, bridge.BridgeError):
+            report = None
+        if isinstance(report, dict) and report.get('success') is False and isinstance(report.get('error'), str):
+            message += ' Native verification failed during %s: %s. Inspect %s' % (
+                str(report.get('stage', 'unknown'))[:80], report['error'][:1000], report_path)
+        else:
+            message += ' Inspect %s' % (run_dir / 'workbench.log')
+        raise ControllerError(message)
+    try:
+        detail = collect_result(run_dir, x, problem, baseline)
+    except Exception as error:
+        update_monitor(run_dir, status='failed', message=str(error))
+        raise
+    detail.update(projectFile=str(settings.project_file), elapsedSeconds=elapsed,
+                  exitCode=exit_code, stopRequested=stop_requested, geometry_checks=geometry)
+    warning = update_monitor(run_dir, status='completed', message='本次原生结果已核验。')
+    if warning:
+        detail['monitor_warning'] = warning
     write_json(run_dir / 'evaluation.json', detail)
     return detail
+
+
+evaluate.supports_durable_evaluation = True

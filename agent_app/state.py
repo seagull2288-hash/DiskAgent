@@ -18,6 +18,7 @@ from typing import Any
 
 from python_control import runtime
 from .schemas import TaskSpec, TaskValidationError
+from .record_trash import is_deleted, mark_deleted
 
 
 WORKFLOW_SCHEMA = 'disk-agent.workflow.v1'
@@ -248,6 +249,8 @@ class WorkflowStore:
                 acquired = True
             except OSError as exc:
                 raise TaskValidationError('WORKFLOW_BUSY', 'Another process holds this workflow lock.') from exc
+            if is_deleted(directory):
+                raise TaskValidationError('WORKFLOW_NOT_FOUND', '该工作流已从列表删除。')
             yield
         finally:
             try:
@@ -300,6 +303,8 @@ class WorkflowStore:
             raise TaskValidationError('WORKFLOW_IO', 'Cannot create workflow: ' + runtime.safe_text(exc)) from exc
 
     def load(self, workflow_id):
+        if is_deleted(self.directory(workflow_id)):
+            raise TaskValidationError('WORKFLOW_NOT_FOUND', '该工作流已从列表删除。')
         path = self._file(workflow_id, 'state.json')
         try:
             raw = json.loads(path.read_text(encoding='utf-8-sig'), object_pairs_hook=_unique_object)
@@ -313,6 +318,12 @@ class WorkflowStore:
         if state.workflow_id != workflow_id:
             raise TaskValidationError('WORKFLOW_ID', 'Saved workflow belongs to a different directory.')
         return state
+
+    def soft_delete(self, workflow_id):
+        with self.lock(workflow_id):
+            with self._file_lock(workflow_id, '.state-write.lock'):
+                self.load(workflow_id)
+                return mark_deleted(self.directory(workflow_id), 'workflow')
 
     def save(self, state):
         if not isinstance(state, WorkflowState):

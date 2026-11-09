@@ -1,0 +1,2 @@
+# Isolated from the llm_opt solver environment. Tested with Python 3.12.
+mcp==1.30.0

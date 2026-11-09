@@ -55,7 +55,7 @@ class SupervisorIntegrationTests(unittest.TestCase):
         return detail
 
     def fake_center(self, api, problem, history, folder, generation, sigma,
-                    client_factory=None):
+                    client_factory=None, selection_context=None):
         self.center_requests += 1
         center = search.parse_center(json.dumps({
             'center': {v['name']: v['reference'] for v in problem['variables']},

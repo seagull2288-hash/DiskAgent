@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime
 import csv
 import hashlib
@@ -55,7 +55,7 @@ def atomic_text(path, text, encoding='utf-8'):
             stream.write(safe_text(text))
             stream.flush()
             os.fsync(stream.fileno())
-        os.replace(temporary, path)
+        bridge.atomic_replace(temporary, path)
     finally:
         if os.path.exists(temporary):
             os.unlink(temporary)
@@ -81,12 +81,37 @@ class Settings:
     problem_file: Path
     key_environment_variable: str
     plot_on_complete: bool
+    optimization_policy: dict | None = None
+
+    def for_policy(self, policy):
+        """Bind a configured modal task to the separately verified modal project."""
+        if policy is None:
+            return self
+        from .objectives import validate_policy
+        policy = validate_policy(policy)
+        project = self.project_file
+        modal_project = self.root / 'project_modal' / '2dmodel.wbpj'
+        if policy['modal'] is not None:
+            if not modal_project.is_file():
+                raise ControllerError('Create and verify project_modal before enabling frequency evaluation.')
+            profile = read_json(modal_project.parent / 'engineering_profile.json')
+            if (profile.get('status') != 'native_verified'
+                    or profile.get('modal_analysis_name') != policy['modal']['analysis_name']):
+                raise ControllerError('The selected modal analysis differs from the verified engineering profile.')
+            if policy['modal']['mode_index'] > profile.get('maximum_modes', 0):
+                raise ControllerError('The verified modal project provides modes 1 through ' + str(profile.get('maximum_modes', 0)) + '.')
+            project = modal_project
+        return replace(self, optimization_policy=policy, project_file=project)
 
     def definition(self):
         """Only the evaluation budget may change during a resume."""
-        return {name: str(getattr(self, name)) for name in (
+        result = {name: str(getattr(self, name)) for name in (
             'root', 'project_file', 'workbench_executable', 'output_root',
             'progress_log', 'api_config', 'problem_file', 'key_environment_variable')}
+        if self.optimization_policy is not None:
+            from .objectives import validate_policy
+            result['optimization_policy'] = validate_policy(self.optimization_policy)
+        return result
 
 
 def load_settings(path=None, rounds=None):
@@ -110,8 +135,9 @@ def load_settings(path=None, rounds=None):
         if not isinstance(raw, str) or not raw or any(c in raw for c in '\0\r\n'):
             raise ControllerError('Invalid path setting: ' + name)
         paths[name] = (ROOT / raw).resolve()
-    if paths['project_file'] != (ROOT / 'project_v2' / '2dmodel.wbpj').resolve():
-        raise ControllerError('The existing verified macro targets project_v2/2dmodel.wbpj; review the macro before changing it.')
+    allowed_projects = {(ROOT / name / '2dmodel.wbpj').resolve() for name in ('project_v2', 'project_modal')}
+    if paths['project_file'] not in allowed_projects:
+        raise ControllerError('Select the original static project or the verified project_modal profile.')
     return Settings(ROOT, count, **paths, key_environment_variable=key_name,
                     plot_on_complete=value['plot_on_complete'])
 
@@ -127,6 +153,9 @@ def fingerprint(settings):
     paths += list((settings.root / 'cad').glob('*.prt'))
     material_root = settings.project_file.parent / (settings.project_file.stem + '_files')
     paths += list(material_root.rglob('*.engd')) + list(material_root.rglob('EngineeringData.xml'))
+    profile = settings.project_file.parent / 'engineering_profile.json'
+    if profile.is_file():
+        paths.append(profile)
     return {str(path): hashlib.sha256(path.read_bytes()).hexdigest() for path in sorted(set(paths))}
 
 

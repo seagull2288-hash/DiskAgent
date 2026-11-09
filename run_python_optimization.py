@@ -14,7 +14,7 @@ from python_control.runtime import (ControllerError, api_key, bridge, load_setti
 from python_control.workbench import project_unlocked
 
 
-def check_environment(settings):
+def check_environment(settings, *, extended=True):
     if sys.version_info < (3, 10):
         raise ControllerError('Python 3.10 or newer is required; use the llm_opt environment.')
     for path in (settings.project_file, settings.workbench_executable, settings.api_config,
@@ -42,10 +42,15 @@ def check_environment(settings):
               'progress_log': str(settings.progress_log), 'api_model': api['model'],
               'api_key_source_variable': settings.key_environment_variable, 'api_key_configured': configured,
               'matlab_required': False, 'api_requests_made': 0, 'finite_element_solves_made': 0,
-              'search_strategy': search['strategy'], 'initial_lhs': search['initial_lhs'],
+              'search_strategy': search['strategy'],
+              'selection_policy': search.get('selection_policy', 'legacy_v1'),
+              'initial_lhs': search['initial_lhs'],
               'batch_size': search['batch_size'], 'pool_size': search['pool_size'],
               'surrogate_min_samples': search['surrogate_min_samples'],
               'search_config': str(settings.root / 'python_control/search_config.json')}
+    if extended:
+        from agent_app.preflight import require_ready
+        report['preflight'] = require_ready(settings, environment_report=report)
     return report
 
 

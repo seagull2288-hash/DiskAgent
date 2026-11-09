@@ -82,6 +82,51 @@ class ResultAnalysisTests(FixtureCase):
         self.assertTrue(result.ok,result.to_dict())
         self.assertIsNone(result.data['current']['displacement_change_from_baseline_percent'])
 
+    def test_minimum_mass_is_independent_of_minimum_stress_and_feedback_window(self):
+        run, state, details = self.run_fixture()
+        for detail, mass in zip(details, (36.0, 27.5, 30.0)):
+            detail['mass_kg'] = mass
+        self.save(run, state, details)
+        snapshot = analysis._snapshot_data(run)
+        result = analysis.analyze_run(run.name, settings=self.settings, since_candidate=1)
+        self.assertTrue(result.ok, result.to_dict())
+        self.assertEqual(result.data['best']['iteration'], 2)
+        self.assertEqual(result.data['minimum_mass'], {'iteration': 1, 'mass_kg': 27.5})
+        self.assertEqual(snapshot['minimum_mass'], result.data['minimum_mass'])
+
+    def test_minimum_mass_includes_baseline_and_skips_missing_measurements(self):
+        run, state, details = self.run_fixture()
+        details[0]['mass_kg'] = 20.0
+        details[2]['mass_kg'] = 25.0
+        self.save(run, state, details)
+        result = analysis.analyze_run(run.name, settings=self.settings)
+        self.assertTrue(result.ok, result.to_dict())
+        self.assertEqual(result.data['minimum_mass'], {'iteration': 0, 'mass_kg': 20.0})
+
+    def test_no_mass_measurement_has_no_minimum_mass_value(self):
+        run, _, _ = self.run_fixture()
+        result = analysis.analyze_run(run.name, settings=self.settings)
+        self.assertTrue(result.ok, result.to_dict())
+        self.assertIsNone(result.data['minimum_mass'])
+
+    def test_pending_mass_cannot_enter_committed_minimum(self):
+        run, state, details = self.run_fixture()
+        details[0]['mass_kg'] = 36.0
+        details[1]['mass_kg'] = 30.0
+        state['pending'] = {'iteration': 3, 'phase': 'evaluated', 'detail': {'mass_kg': 1.0}}
+        self.save(run, state, details)
+        result = analysis.analyze_run(run.name, settings=self.settings)
+        self.assertTrue(result.ok, result.to_dict())
+        self.assertEqual(result.data['minimum_mass'], {'iteration': 1, 'mass_kg': 30.0})
+
+    def test_nonpositive_measured_mass_is_rejected(self):
+        run, state, details = self.run_fixture()
+        for mass in (0, -1, True):
+            with self.subTest(mass=mass):
+                details[0]['mass_kg'] = mass
+                self.save(run, state, details)
+                self.assertFalse(analysis.analyze_run(run.name, settings=self.settings).ok)
+
     def test_original_center_log_is_counted_once_not_copied_per_candidate(self):
         run,_,_=self.run_fixture()
         usage={'prompt_tokens':2906,'completion_tokens':151,'total_tokens':3057,

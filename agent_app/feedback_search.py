@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 from pathlib import Path
 import re
 
@@ -24,6 +25,51 @@ POLICY_SCHEMA = 'disk-agent.feedback-policy.v1'
 ADAPTER_VERSION = 'disk-agent.feedback-adapter.v1'
 REF_SCHEMA = 'disk-agent.feedback-ref.v1'
 DECISION_SCHEMA = 'disk-agent.search-decision.v1'
+_SELECTION_ORIGINS = ('llm_center', 'best_local', 'global_uniform')
+
+
+def _v2_selection_summary(plan, authorized_count, start_offset=0):
+    """Extract signed-plan facts and distinguish full-plan from authorized tail."""
+    if plan.get('selection_policy') not in ('hybrid_local_v2', 'hybrid_local_v3'):
+        return None
+    summary = plan.get('selection_summary')
+    origins, indices, selected = plan.get('pool_origins'), plan.get('selected_pool_indices'), plan.get('selected')
+    if (not isinstance(summary, dict) or not isinstance(origins, list) or not isinstance(indices, list)
+            or not isinstance(selected, list) or len(indices) != len(selected) or type(authorized_count) is not int
+            or type(start_offset) is not int or not 0 <= start_offset <= authorized_count <= len(indices)):
+        raise TaskValidationError('FEEDBACK_SELECTION', 'V2 plan selection summary is missing or inconsistent.')
+    radius = summary.get('local_radius_fraction')
+    quotas = summary.get('requested_quotas')
+    if (type(radius) not in (int, float) or not math.isfinite(radius) or not 0 < radius <= 1
+            or summary.get('local_radius_metric') != 'normalized_Linf'
+            or type(summary.get('surrogate_used')) is not bool or not isinstance(quotas, dict)
+            or set(quotas) - set(_SELECTION_ORIGINS)
+            or any(type(count) is not int or count < 0 for count in quotas.values())):
+        raise TaskValidationError('FEEDBACK_SELECTION', 'V2 radius, quotas or surrogate gate metadata is invalid.')
+    selected_origins = []
+    for index in indices:
+        if type(index) is not int or not 0 <= index < len(origins) or origins[index] not in _SELECTION_ORIGINS:
+            raise TaskValidationError('FEEDBACK_SELECTION', 'V2 plan has an invalid selected origin.')
+        selected_origins.append(origins[index])
+
+    def counts(sequence):
+        return {origin: sequence.count(origin) for origin in _SELECTION_ORIGINS}
+
+    recorded_counts = summary.get('planned_origin_counts')
+    if (not isinstance(recorded_counts, dict) or set(recorded_counts) - set(_SELECTION_ORIGINS)
+            or any(type(count) is not int or count < 0 for count in recorded_counts.values())
+            or any(recorded_counts.get(origin, 0) != count for origin, count in counts(selected_origins).items())):
+        raise TaskValidationError('FEEDBACK_SELECTION', 'V2 source counts disagree with the signed selected points.')
+    # Copy only JSON values, without retaining mutable references to the plan.
+    try:
+        result = json.loads(json.dumps(summary, ensure_ascii=False, allow_nan=False))
+    except (ValueError, TypeError) as exc:
+        raise TaskValidationError('FEEDBACK_SELECTION', 'V2 plan summary must contain finite JSON values.') from exc
+    result['planned_origin_counts'] = counts(selected_origins)
+    authorized_origins = selected_origins[start_offset:authorized_count]
+    result['authorized_origin_counts'] = counts(authorized_origins)
+    result['authorized_origin_sequence'] = authorized_origins
+    return result
 
 
 def _code_signature():
@@ -302,6 +348,13 @@ class FeedbackSearchProposer:
                     {'status':'pending','completed_candidates':0,'candidate_iterations':[],
                      'best_stress_mpa':None,'best_improvement_mpa':None,
                      'stress_reduction_percent':None,'area_change_percent':None}}
+        authorization_start = min(trace['evaluation_target_total_candidates'],
+                                  max(start, self._state().start_completed_candidates))
+        trace['authorization_start_completed_candidates'] = authorization_start
+        summary = _v2_selection_summary(plan, trace['evaluation_target_total_candidates'] - start,
+                                        start_offset=authorization_start - start)
+        if summary is not None:
+            trace['selection_summary'] = summary
         _save(decision_file,trace,self.folder)
         if self.on_decision is not None:
             self.on_decision(trace)
@@ -316,8 +369,10 @@ def update_decision_outcomes(traces,analysis):
     done=analysis['completed_candidates']
     for trace in traces:
         item=dict(trace)
-        start=trace['basis_completed_candidates']
-        end=min(start+trace['selected_candidates'],trace.get('evaluation_target_total_candidates',start+trace['selected_candidates']))
+        basis_start=trace['basis_completed_candidates']
+        start=trace.get('authorization_start_completed_candidates',basis_start)
+        end=min(basis_start+trace['selected_candidates'],
+                trace.get('evaluation_target_total_candidates',basis_start+trace['selected_candidates']))
         window=[p for p in records if start<p['iteration']<=min(end,done)]
         before=[p for p in records if p['iteration']<=start]
         best=min(before+window,key=lambda p:p['stress_mpa']) if before else None
@@ -328,6 +383,18 @@ def update_decision_outcomes(traces,analysis):
                          'best_improvement_mpa':previous['stress_mpa']-best['stress_mpa'] if best else None,
                          'stress_reduction_percent':best['stress_reduction_from_baseline_percent'] if best else None,
                          'area_change_percent':best['approximate_area_change_from_baseline_percent'] if best else None}
+        if isinstance(trace.get('selection_summary'), dict):
+            counts = dict.fromkeys(_SELECTION_ORIGINS, 0)
+            unknown = 0
+            for point in window:
+                origin = point.get('selection_origin')
+                if (point.get('selection_policy') in ('hybrid_local_v2', 'hybrid_local_v3') and
+                        isinstance(origin, str) and origin in counts):
+                    counts[origin] += 1
+                else:
+                    unknown += 1
+            item['outcome']['observed_origin_counts'] = counts
+            item['outcome']['unknown_selection_origins'] = unknown
         result.append(item)
     return result
 
@@ -348,4 +415,18 @@ def render_decision_report(traces):
                   '- 后续实测状态：`'+outcome['status']+'`；已提交候选数：'+str(outcome['completed_candidates'])+'。',
                   '- 后续历史最优应力：'+str(outcome['best_stress_mpa'])+' MPa。',
                   '- 决策计划：`'+item['plan_file']+'`。','']
+        selection = item.get('selection_summary')
+        if isinstance(selection, dict):
+            def counts_text(counts):
+                return '；'.join(origin+'='+str(counts.get(origin, 0)) for origin in _SELECTION_ORIGINS)
+            lines += ['- 程序选点策略：`'+str(selection.get('policy_version', 'hybrid_local_v2'))+'`。',
+                      '- 完整计划来源：'+counts_text(selection['planned_origin_counts'])+'。',
+                      '- 本工作流授权来源：'+counts_text(selection['authorized_origin_counts'])+'。',
+                      '- 已提交候选来源：'+counts_text(outcome.get('observed_origin_counts', {}))
+                      +'；来源未知='+str(outcome.get('unknown_selection_origins', 0))+'。',
+                      '- 历史最优局部半径：'+str(selection.get('local_radius_fraction'))
+                      +'（'+str(selection.get('local_radius_metric', 'normalized_Linf'))+'）；'
+                      '调整：'+str(selection.get('adaptation_action', '未记录'))+'。',
+                      '- GP选点门禁：'+str(selection.get('surrogate_used'))
+                      +'；原因：'+str(selection.get('surrogate_reason', '未记录'))+'。', '']
     return '\n'.join(lines)

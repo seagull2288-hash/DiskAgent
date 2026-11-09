@@ -15,6 +15,7 @@ from pathlib import Path
 import random
 import re
 import socket
+import sys
 import time
 import urllib.error
 import urllib.parse
@@ -67,6 +68,21 @@ def read_json(path):
         raise BridgeError('FILE_READ', 'Cannot read UTF-8 JSON file.') from exc
 
 
+
+def atomic_replace(source, destination):
+    """Replace a complete snapshot, tolerating short Windows sharing conflicts."""
+    for attempt in range(8):
+        try:
+            os.replace(source, destination)
+            return
+        except OSError as exc:
+            if (sys.platform != 'win32' or getattr(exc, 'winerror', None) not in (5, 32, 33)
+                    or attempt == 7):
+                raise
+            # Keep the same temporary snapshot and the caller's write lock.
+            time.sleep(min(0.01 * 2 ** attempt, 0.16))
+
+
 def write_json(path, value):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -74,7 +90,7 @@ def write_json(path, value):
     try:
         temp.write_text(json.dumps(value, ensure_ascii=False, indent=2,
                                    allow_nan=False) + '\n', encoding='utf-8')
-        os.replace(temp, path)
+        atomic_replace(temp, path)
     finally:
         if temp.exists():
             temp.unlink()
@@ -241,6 +257,8 @@ def make_prompt(problem, history, cfg, correction=None):
     best = min(history, key=lambda r: r['stress_mpa']) if history else None
     context = {
         'task': 'Propose one new nine-parameter design for the existing evaluator.',
+        'proposal_mode': 'llm_direct',
+        'candidate_iteration': len(history),
         'objective': problem['objective'], 'input_order': NAMES,
         'input_numeric_convention': problem['input_numeric_convention'],
         'variables': problem['variables'], 'engineering_context': problem['engineering_context'],
@@ -265,6 +283,34 @@ def make_prompt(problem, history, cfg, correction=None):
         },
         'correction_requested': correction,
     }
+    if history:
+        context['baseline_measured'] = history[0]
+        context['optimization_feedback'] = {
+            'completed_candidates': len(history) - 1,
+            'latest_measured': history[-1],
+            'recent_best_stress_mpa': [min(row['stress_mpa'] for row in history[:i + 1])
+                                       for i in range(max(0, len(history) - 8), len(history))],
+        }
+    if problem.get('optimization_policy') is not None:
+        from python_control.objectives import archive
+        evaluated = archive(history, problem['optimization_policy'])
+        context['optimization_policy'] = evaluated['policy']
+        context['current_best_measured'] = history[evaluated['anchor_iteration']] if history else None
+        context['objective'] = {'objectives': evaluated['policy']['objectives'],
+                                'constraints': evaluated['policy']['constraints']}
+        context['pareto_iterations'] = evaluated['pareto_iterations']
+        if history:
+            anchor = evaluated['anchor_iteration']
+            indices = ([anchor] + [i for i in indices if i != anchor])[:cfg['history_prompt_limit']]
+            context['selected_history_indices_1based'] = [i + 1 for i in indices]
+            context['observations'] = [history[i] for i in indices]
+            context['selection_rule'] = 'configured-policy anchor first, then selected measured history, capped at configured limit'
+            context['optimization_feedback'].update({
+                'anchor_iteration': anchor,
+                'anchor_evaluation': evaluated['evaluations'][anchor],
+                'feasible_count': evaluated['feasible_count'],
+                'recent_evaluations': evaluated['evaluations'][-8:],
+            })
     system = (
         'You propose numerical candidates for an engineering optimization controller. '
         'Return exactly one JSON object matching the supplied schema, without markdown or code. '
@@ -275,6 +321,10 @@ def make_prompt(problem, history, cfg, correction=None):
         'candidate_type must be a JSON string, never omitted, null, or a new label. '
         'Do not echo response_format or add a type/json_object metadata field to the answer. '
         'Use all nine original-model numeric values, never percentages. Respect bounds and avoid repeated designs. '
+        'Your parameters are the exact next design sent to Workbench after four-decimal quantization and validation. '
+        'Use measured improvements and constraint violations to choose dimensions directly. '
+        'Compare with the configured-policy anchor when present and explain a concise adjustment hypothesis. '
+        'Refine useful directions with smaller changes when progress slows; reconsider unsuccessful directions. '
         'Do not invent measured stress, geometry validity, material properties, or constraints. '
         'Historical baseline conditions and unverified unit scaling are labelled in the context; do not present them as freshly verified. '
         'Give a brief engineering hypothesis in rationale, not hidden reasoning or executable instructions. '

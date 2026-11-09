@@ -21,6 +21,34 @@ _RULES = {
     'four decimal numerical quantization': 'precision',
     'normalized-space duplicate exclusion': 'distinct',
 }
+_SELECTION_ROLES = {'llm_center': 'llm_proposal', 'best_local': 'local_refinement',
+                    'global_uniform': 'global_exploration'}
+
+
+def _selection_metadata(proposal):
+    """Read program provenance, never infer it from an LLM's exploit label."""
+    if not isinstance(proposal, dict) or proposal.get('selection_policy') not in ('hybrid_local_v2', 'hybrid_local_v3'):
+        return {}
+    origin = proposal.get('selection_origin')
+    radius = proposal.get('local_radius_fraction')
+    if (not isinstance(origin, str) or origin not in _SELECTION_ROLES or
+            proposal.get('selection_role') != _SELECTION_ROLES[origin] or
+            type(radius) not in (int, float) or not math.isfinite(radius) or not 0 < radius <= 1):
+        raise TaskValidationError('SELECTION_METADATA', 'Committed v2 selection provenance is invalid.')
+    return {name: proposal[name] for name in
+            ('selection_policy', 'selection_origin', 'selection_role', 'local_radius_fraction')}
+
+
+def _selection_counts(samples):
+    counts = dict.fromkeys(_SELECTION_ROLES, 0)
+    unknown = 0
+    for point in samples:
+        origin = point.get('selection_origin')
+        if point.get('selection_policy') in ('hybrid_local_v2', 'hybrid_local_v3') and origin in counts:
+            counts[origin] += 1
+        else:
+            unknown += 1
+    return {'origin_counts': counts, 'unknown_candidates': unknown, 'committed_candidates': len(samples)}
 
 
 def _warn(warnings, message):
@@ -201,7 +229,7 @@ def _workbench_costs(root, state, warnings):
     }
 
 
-def _observation(iteration, point, baseline, detail, prior_best):
+def _observation(iteration, point, baseline, detail, prior_best, *, proposal=None):
     stress = _finite(point['stress_mpa'], 'stress_mpa')
     displacement = _finite(point['displacement_mm'], 'displacement_mm')
     area = _finite(point['area_m2'], 'area_m2')
@@ -211,6 +239,7 @@ def _observation(iteration, point, baseline, detail, prior_best):
     improvement = _finite(max(0.0, prior_best - stress), 'best improvement')
     return {
         'iteration': iteration, 'parameters': dict(point['parameters']),
+        **{metric: point[metric] for metric in ('mass_kg', 'frequency_hz', 'modal_frequencies_hz') if metric in point},
         'stress_mpa': stress, 'displacement_mm': displacement, 'approximate_area_m2': area,
         'stress_change_from_baseline_mpa': stress_delta,
         'stress_change_from_baseline_percent': _percent(stress_delta, baseline['stress_mpa'], 'stress change percent'),
@@ -225,6 +254,7 @@ def _observation(iteration, point, baseline, detail, prior_best):
         'native_report_file': detail.get('nativeReportFile'),
         'evaluation_directory': detail.get('runDir'),
         'result_source': 'committed_workbench_observation',
+        **_selection_metadata(proposal),
     }
 
 
@@ -285,7 +315,8 @@ def analyze_run(run_id=None, *, settings=None, since_candidate=0, verify_native=
                     if not isinstance(declared, str) or not _inside(Path(declared), root):
                         raise TaskValidationError('EVIDENCE_PATH', 'Native evidence must stay within this run.')
                 controller.verify_native(detail, state['baseline'] if i else None)
-            samples.append(_observation(i, point, history[0], detail, prior_best))
+            samples.append(_observation(i, point, history[0], detail, prior_best,
+                                        proposal=state['records'][i-1].get('proposal') if i else None))
             prior_best = min(prior_best, point['stress_mpa'])
             evidence_records.append({'iteration': i, 'native_report_file': detail.get('nativeReportFile'),
                                      'evaluation_directory': detail.get('runDir')})
@@ -318,7 +349,7 @@ def analyze_run(run_id=None, *, settings=None, since_candidate=0, verify_native=
                                          'displacement_mm': item['displacement_mm']} for item in window_samples[-3:]],
                     'causal_attribution': 'not_established', 'hotspot_attribution': 'not_available',
                     'engineering_qualification': 'not_assessed'}
-        summary = (f'已有{done}个候选完成并提交，另有1个基准。历史最优为第{best["iteration"]}条记录，'
+        summary = (f'已有{done}个候选完成并提交，另有1个基准。最小应力方案为第{best["iteration"]}条记录，'
                    f'最大等效应力{best["stress_mpa"]:.6f} MPa，相对基准降低'
                    f'{best["stress_reduction_from_baseline_percent"]:.4f}%。'
                    f'本分析窗口包含{len(window_samples)}个新提交候选。' if best else
@@ -332,9 +363,22 @@ def analyze_run(run_id=None, *, settings=None, since_candidate=0, verify_native=
         data = {'run_id': root.name, 'run_dir': str(root), 'run_status': snapshot['run_status'],
                 'last_error': snapshot.get('last_error'),
                 'completed_candidates': done, 'target_total_candidates': snapshot['target_total_candidates'],
-                'baseline': baseline, 'best': best, 'current': current, 'window': window,
+                'baseline': baseline, 'best': best, 'minimum_mass': snapshot['minimum_mass'],
+                'current': current, 'window': window,
                 'candidates': candidates, 'constraint_evaluation': constraints,
+                'search_selection_summary': dict(_selection_counts(candidates), window=_selection_counts(window_samples)),
                 'evidence': evidence, 'costs': costs, 'feedback': feedback, 'summary_zh': summary}
+        if state.get('optimization_policy') is not None:
+            from python_control.objectives import archive
+            data['optimization'] = archive(history, state['optimization_policy'])
+            data['optimization']['run_id'] = root.name
+            data['optimization']['observations'] = [dict(point, iteration=i) for i, point in enumerate(history)]
+            feedback['optimization'] = data['optimization']
+        data['design_selection'] = controller.selection_summary(history, data.get('optimization'))
+        selected = data['design_selection']['recommended']
+        if data.get('optimization') is not None:
+            data['summary_zh'] += (f'当前配置推荐第{selected["iteration"]}条记录。' if selected is not None else
+                                   '当前配置下暂无可行推荐方案。')
         if read_checkpoint(root) != state:
             raise TaskValidationError('RUN_CHANGED','Checkpoint changed during analysis; retry the read.')
         return ToolResult(True, 'analyze', 'analyzed', data, warnings=warnings)
@@ -348,22 +392,77 @@ def _format(value, digits=6):
     return '未知/不适用' if value is None else f'{value:.{digits}f}'
 
 
+def _selection_report(selections):
+    statuses = {'feasible': '满足当前配置', 'infeasible': '超限', 'missing': '数据缺失'}
+    source = '运行保存的目标与约束' if selections['policy_source'] == 'saved_optimization_policy' else '历史默认应力目标'
+    lines = ['## 方案推荐与取舍', '', '配置版本 `' + selections['policy_id'] + '`。', '',
+             '配置来源为' + source + '，已启用约束 ' + str(selections['constraint_count']) + ' 项。', '',
+             '| 方案角色 | 记录 | 应力 MPa | 整盘质量 kg | 指定频率 Hz | 当前配置状态 | 归一化评分 |',
+             '|---|---:|---:|---:|---:|---|---:|']
+    designs = [('最小应力方案', selections['minimum_stress']), ('当前配置推荐方案', selections['recommended'])]
+    designs.extend(('Pareto 方案', design) for design in selections['pareto'])
+    for label, design in designs:
+        if design is None:
+            lines.append('| ' + label + ' | 暂无 | — | — | — | 暂无可行推荐或已提交数据 | — |')
+            continue
+        point, evaluation = design['observation'], design['evaluation']
+        lines.append('| ' + label + ' | ' + str(design['iteration']) + ' | ' + _format(point['stress_mpa'])
+                     + ' | ' + _format(point.get('mass_kg')) + ' | ' + _format(point.get('frequency_hz'))
+                     + ' | ' + statuses[evaluation['status']] + ' | ' + _format(evaluation['score']) + ' |')
+    if selections['constraint_count'] == 0:
+        lines += ['', '当前配置未启用数值约束，方案按已选目标排序。']
+    else:
+        lines += ['', '### 所列方案的约束判定', '',
+                  '裕量以指标原单位表示，正值表示尚有余量，负值表示超限，零表示边界。频带裕量取到最近边界的距离，频带内部为负值。', '',
+                  '| 记录 | 指标 | 规则 | 实际值 | 裕量 | 状态 | 依据 |', '|---:|---|---|---:|---:|---|---|']
+        seen = set()
+        for _, design in designs:
+            if design is None or design['iteration'] in seen:
+                continue
+            seen.add(design['iteration'])
+            for check in design['evaluation']['constraint_checks']:
+                limit = _format(check['limit'])
+                if check['operator'] == 'outside_band':
+                    rule = '避让 (' + limit + ', ' + _format(check['upper_limit']) + ')'
+                else:
+                    rule = check['operator'] + ' ' + limit
+                source = check['source'].replace('|', '\\|').replace('\r', ' ').replace('\n', ' ')
+                lines.append('| ' + str(design['iteration']) + ' | ' + check['metric'] + ' | ' + rule
+                             + ' ' + check['margin_unit'] + ' | ' + _format(check['actual'])
+                             + ' | ' + _format(check['margin']) + ' ' + check['margin_unit']
+                             + ' | ' + {'passed': '通过', 'failed': '超限', 'missing': '数据缺失'}[check['status']]
+                             + ' | ' + source + ' |')
+    recommended = selections['recommended']
+    if recommended is not None:
+        lines += ['', '### 当前配置推荐方案尺寸', '',
+                  '记录 ' + str(recommended['iteration']) + '，尺寸沿用原模型数值约定。', '',
+                  '| 参数 | 尺寸 mm |', '|---|---:|']
+        for name in runtime.bridge.NAMES:
+            lines.append('| ' + name + ' | ' + _format(recommended['observation']['parameters'][name], 4) + ' |')
+    return lines + ['']
+
+
 def render_report(data: dict) -> str:
     """Render only the whitelisted numeric analysis; does not generate or save a file."""
     if not isinstance(data, dict) or 'run_id' not in data or 'costs' not in data:
         raise TaskValidationError('REPORT_DATA', 'render_report expects successful analyze_run.data.')
-    lines = ['# 二维轮盘应力优化结果', '',
+    lines = ['# 二维轮盘优化结果', '',
              f'运行：`{data["run_id"]}`；状态：`{data["run_status"]}`。', '',
              data['summary_zh'], '',
-             '当前案例仅优化最大等效应力。面积为公式近似截面积，不等于质量；应力降低不是强度或寿命合格证明。', '',
-             '| 方案 | 记录序号 | 最大等效应力 MPa | 最大位移 mm | 近似截面积 m² | 相对基准应力降低 % |',
-             '|---|---:|---:|---:|---:|---:|']
+             ('本任务按保存的目标与约束配置评价，目标推荐和Pareto方案见配置评价部分。'
+              if data.get('optimization') is not None else
+              '当前案例仅优化最大等效应力。面积为公式近似截面积，不等于质量；应力降低不是强度或寿命合格证明。'), '']
+    if data.get('design_selection') is not None:
+        lines += _selection_report(data['design_selection'])
+    lines += ['## 应力记录对照', '',
+              '| 方案 | 记录序号 | 最大等效应力 MPa | 最大位移 mm | 近似截面积 m² | 相对基准应力降低 % |',
+              '|---|---:|---:|---:|---:|---:|']
     if data.get('last_error') and data['run_status'] in ('failed','interrupted'):
         # Insert before the numeric table so an old failed run is never presented
         # as a successful engineering optimization merely because analysis works.
         error = data['last_error']
         lines[4:4] = ['最近记录错误：'+str(error.get('type',''))+' — '+str(error.get('message','')), '']
-    for label, key in (('基准', 'baseline'), ('历史最优', 'best'), ('最新已提交', 'current')):
+    for label, key in (('基准', 'baseline'), ('最小应力方案', 'best'), ('最新已提交', 'current')):
         point = data.get(key)
         if point:
             lines.append(f'| {label} | {point["iteration"]} | {_format(point["stress_mpa"])} | '
@@ -371,11 +470,11 @@ def render_report(data: dict) -> str:
                          f'{_format(point["stress_reduction_from_baseline_percent"], 4)} |')
     best = data.get('best')
     if best is not None:
-        lines += ['', '历史最优相对基准：位移变化 '
+        lines += ['', '最小应力方案相对基准的位移变化 '
                   + _format(best['displacement_change_from_baseline_percent'],4)
                   + '%；公式估算截面积变化 '
                   + _format(best['approximate_area_change_from_baseline_percent'],4)+'%。', '',
-                  '## 最优方案尺寸', '', '| 参数 | 原模型尺寸值（mm） |', '|---|---:|']
+                  '## 最小应力方案尺寸', '', '| 参数 | 原模型尺寸值（mm） |', '|---|---:|']
         for name in runtime.bridge.NAMES:
             lines.append('| '+name+' | '+_format(best['parameters'][name],4)+' |')
     lines += ['', '## 分析窗口', '',
@@ -385,8 +484,13 @@ def render_report(data: dict) -> str:
               '## 约束与证据', '']
     for rule in data['constraint_evaluation']['implemented_rules']:
         lines.append(f'- 已实现规则 `{rule["rule"]}`：`{rule["status"]}`。')
+    configured = {rule['metric'] for rule in data.get('optimization', {}).get('policy', {}).get('constraints', [])}
+    engineering_metrics = {'allowable stress': 'stress_mpa', 'mass bound': 'mass_kg'}
     for rule in data['constraint_evaluation']['engineering_constraints']:
-        lines.append(f'- 工程约束 `{rule["name"]}`：未知，当前未实现或未配置。')
+        if engineering_metrics.get(rule['name']) in configured:
+            lines.append('- `' + rule['name'] + '` 的数值筛选按上述配置评价，工程限值认证状态为未知。')
+        else:
+            lines.append(f'- 工程约束 `{rule["name"]}`：未知，当前未实现或未配置。')
     lines += ['- 强度判定、质量约束与寿命判定均未认证。',
               '- 不根据参数变化推断已验证的热点位置或物理因果关系。',
               f'- 原生记录重新核验：`{data["evidence"]["native_verification_status"]}`。',
@@ -405,4 +509,40 @@ def render_report(data: dict) -> str:
               f'输入{count(llm["input_tokens"])}、输出{count(llm["output_tokens"])}、合计{count(llm["total_tokens"])}。',
               '- Token只统计原始优化器请求，未叠加迭代目录复制件或usage细分项，也不包含规划器/调度器自身调用。',
               '- 缺失usage、失败或损坏日志代表成本未知或部分已知，不能视为零花费。货币费用尚未计算。', '']
+    selection = data.get('search_selection_summary')
+    if isinstance(selection, dict):
+        counts = selection['origin_counts']
+        lines += ['## 实际选点来源（仅已提交候选）', '',
+                  '- LLM中心直评：'+str(counts['llm_center'])+'；历史最优附近局部细化：'
+                  +str(counts['best_local'])+'；全局均匀探索：'+str(counts['global_uniform'])+'。',
+                  '- 来源未记录：'+str(selection['unknown_candidates'])+'。'
+                  '旧记录不按模型的exploit/explore声明推断程序实际选点方式。', '']
+    optimization = data.get('optimization')
+    if optimization is not None:
+        lines += ['', '## 配置目标与可行方案', '',
+                  '配置版本 ' + optimization['policy_id'],
+                  '可行记录数 ' + str(optimization['feasible_count']),
+                  '目标推荐记录 ' + str(optimization['best_iteration']),
+                  'Pareto记录 ' + ', '.join(map(str, optimization['pareto_iterations'])), '',
+                  '| 记录 | 应力 MPa | 整盘质量 kg | 指定频率 Hz | 可行状态 | 归一化评分 |',
+                  '|---|---:|---:|---:|---|---:|']
+        for point, evaluation in zip(optimization['observations'], optimization['evaluations']):
+            lines.append('| ' + str(point['iteration']) + ' | ' + _format(point['stress_mpa']) + ' | '
+                         + _format(point.get('mass_kg')) + ' | ' + _format(point.get('frequency_hz')) + ' | '
+                         + evaluation['status'] + ' | ' + _format(evaluation['score']) + ' |')
+        lines += ['', '### 已配置约束依据', '']
+        for rule in optimization['policy']['constraints']:
+            lines.append('- ' + rule['metric'] + ' ' + rule['operator'] + ' ' + str(rule['value'])
+                         + ' / ' + rule['reference'] + '，依据 ' + rule['source'])
+        if optimization['policy']['modal'] is not None:
+            lines += ['', '模态按配置的阶次取值，跨阶振型跟踪尚待独立验证。']
+    modal_points = [point for point in [data.get('baseline')] + data.get('candidates', []) if point]
+    if any('modal_frequencies_hz' in point for point in modal_points):
+        lines += ['', '## 六阶预应力模态频率', '',
+                  '阶次按当前求解结果排序，工况与原生证据随各记录保存。', '',
+                  '| 记录 | f1 Hz | f2 Hz | f3 Hz | f4 Hz | f5 Hz | f6 Hz |',
+                  '|---:|---:|---:|---:|---:|---:|---:|']
+        for point in modal_points:
+            values = point.get('modal_frequencies_hz', [None] * 6)
+            lines.append('| ' + str(point['iteration']) + ' | ' + ' | '.join(_format(value) for value in values) + ' |')
     return '\n'.join(lines)

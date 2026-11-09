@@ -13,10 +13,11 @@ from pathlib import Path
 import re
 
 from python_control import controller, runtime
+from python_control.sampling import normalize
 from python_control.search import load_search_config
 from python_control.workbench import canonical_x
 
-from .performance_predictor import predict_snapshot
+from .performance_predictor import _local_support_mask, predict_snapshot
 from .schemas import TaskValidationError
 from .validation import read_checkpoint, resolve_run
 
@@ -181,6 +182,16 @@ def _validate(value, run_dir, state, problem, config=None):
         if (type(within) is not bool or
                 within != (point['distance_to_measurements'] <= value['search_config']['surrogate_max_distance'])):
             _fail('Prediction neighborhood flag does not match the model distance.')
+        if value['search_config'].get('selection_policy') == 'hybrid_local_v3':
+            try:
+                expected = bool(_local_support_mask(normalize([x], problem), prediction['validation'],
+                                                    state['history'][:k], problem, value['search_config'])[0])
+            except (ValueError, TypeError, KeyError, IndexError, ArithmeticError) as exc:
+                _fail('Cannot verify the saved local prediction region: ' + str(exc))
+            if (type(point.get('within_validated_region')) is not bool or
+                    type(point.get('eligible_for_ranking')) is not bool or
+                    point['within_validated_region'] != expected or point['eligible_for_ranking'] != expected):
+                _fail('Local ranking eligibility disagrees with the saved measured support.')
     elif results:
         _fail('Unavailable models cannot supply numeric predictions.')
     return value
@@ -270,7 +281,9 @@ def read_prediction_records(run_dir, state, problem):
                     basis_completed_candidates=None, prediction_status=None,
                     status='missing_pre_prediction', predicted_stress_mpa=None,
                     predictive_std_mpa=None, actual_stress_mpa=actual, error_mpa=None,
-                    absolute_error_mpa=None, relative_error_percent=None)
+                    absolute_error_mpa=None, relative_error_percent=None,
+                    within_validated_region=None, eligible_for_ranking=None,
+                    model_scope=None, validation=None, uncertainty_calibration=None)
         if k in saved:
             value, path = saved[k]
             prediction = value['prediction']
@@ -279,6 +292,9 @@ def read_prediction_records(run_dir, state, problem):
                         prediction_status=prediction['status'], reason=prediction.get('reason'),
                         model_version=prediction.get('model_version'),
                         model_code_signature=prediction.get('model_code_signature'),
+                        model_scope=prediction.get('model_scope'), validation=prediction.get('validation'),
+                        uncertainty_calibration=(prediction['validation'].get('uncertainty_calibration')
+                            if isinstance(prediction.get('validation'), dict) else None),
                         data_signature=prediction.get('data_signature'),
                         basis_history_signature=value['basis_history_signature'])
             if prediction['status'] == 'ready':
@@ -286,7 +302,9 @@ def read_prediction_records(run_dir, state, problem):
                 item.update(predicted_stress_mpa=point['predicted_stress_mpa'],
                             predictive_std_mpa=point['predictive_std_mpa'],
                             distance_to_measurements=point['distance_to_measurements'],
-                            within_training_neighborhood=point.get('within_training_neighborhood'))
+                            within_training_neighborhood=point.get('within_training_neighborhood'),
+                            within_validated_region=point.get('within_validated_region'),
+                            eligible_for_ranking=point.get('eligible_for_ranking'))
                 if actual is not None:
                     error = actual - point['predicted_stress_mpa']
                     item.update(status='compared', error_mpa=error, absolute_error_mpa=abs(error),
@@ -306,5 +324,5 @@ def read_prediction_records(run_dir, state, problem):
         'root_mean_squared_error_mpa': math.sqrt(sum(e * e for e in errors) / len(errors)) if errors else None,
         'max_absolute_error_mpa': max(map(abs, errors)) if errors else None,
         'note': ('仅比较求解前已保存的影子预测与控制器已提交有限元结果；缺失历史预测不回填。'
-                 '误差为实测减预测；标准差未校准为95%可靠区间。'),
+                 '误差为实测减预测；各记录保留当时校准信息，覆盖率未经独立认证。'),
     })

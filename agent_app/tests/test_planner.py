@@ -55,6 +55,38 @@ class PlannerFixture(FixtureCase):
 
 
 class OfflinePlanningTests(PlannerFixture):
+    def test_run_steps_are_candidate_budgets_for_new_tasks(self):
+        run, _ = self.save_run(name='run_existing', done=5, target=10)
+        for text in ('跑100步', '请帮我跑一百步', '优化100步', '运行100步', '新建优化100 steps'):
+            with self.subTest(text=text):
+                result = planner.plan_task(text, settings=self.settings, context_run_id=run.name)
+                self.assertTrue(result.ok, result.to_dict())
+                self.assertEqual(result.data['task']['total_candidate_budget'], 100)
+                self.assertNotIn('run_id', result.data['task'])
+
+    def test_step_continuation_keeps_additional_and_total_budgets_distinct(self):
+        run, _ = self.save_run(done=5, target=10)
+        cases = [('再跑100步', 'additional_candidate_budget'),
+                 ('继续跑，总共100步', 'total_candidate_budget')]
+        for text, field in cases:
+            with self.subTest(text=text):
+                result = planner.plan_task(text, settings=self.settings, context_run_id=run.name)
+                self.assertTrue(result.ok, result.to_dict())
+                self.assertEqual(result.data['task'][field], 100)
+                self.assertEqual(result.data['task']['run_id'], run.name)
+        result = planner.plan_task('继续跑100步', settings=self.settings, context_run_id=run.name)
+        self.assertEqual(result.status, 'clarification_needed')
+
+    def test_invalid_step_counts_and_plan_only_requests_keep_validation(self):
+        for text in ('跑0步', '跑-1步', '跑1.5步', '跑100到200步', '跑100步，优化20个候选'):
+            with self.subTest(text=text):
+                result = planner.plan_task(text, settings=self.settings)
+                self.assertEqual(result.status, 'clarification_needed', result.to_dict())
+        with patch.object(planner, 'execute_task', side_effect=AssertionError('preview only')):
+            result = planner.execute_request('只预览，跑100步，先不计算', settings=self.settings, live=True)
+        self.assertTrue(result.ok, result.to_dict())
+        self.assertTrue(result.data['plan_only'])
+
     def test_noncanonical_chinese_budgets_need_explicit_digits(self):
         for text in ('优化一百二次','优化十十个候选','优化一亿二十个候选'):
             with self.subTest(text=text):
@@ -237,6 +269,42 @@ class OfflinePlanningTests(PlannerFixture):
 
 
 class ModelPlanningTests(PlannerFixture):
+    def test_steps_with_model_use_program_task_and_schema_shaped_response(self):
+        response = self.decision(total_candidate_budget=100)
+        response['task'].pop('optimization_policy')
+        with self.fake_model(response) as (factory, _):
+            result = planner.plan_task('跑100步', settings=self.settings, use_llm=True, client_factory=factory)
+        self.assertTrue(result.ok, result.to_dict())
+        self.assertEqual(result.data['task']['total_candidate_budget'], 100)
+        prompt = json.loads((Path(result.data['planning_log_dir']) / 'prompt.json').read_text(encoding='utf-8'))
+        self.assertEqual(json.loads(prompt['user'])['program_task']['total_candidate_budget'], 100)
+
+    def test_model_unneeded_clarification_uses_confirmed_step_task(self):
+        response = {'decision':'clarify', 'task':None, 'message':'需要候选数量。', 'questions':['要跑多少候选？']}
+        with self.fake_model(response) as (factory, _):
+            result = planner.plan_task('跑100步', settings=self.settings, use_llm=True, client_factory=factory)
+        self.assertTrue(result.ok, result.to_dict())
+        self.assertEqual(result.data['task']['total_candidate_budget'], 100)
+        self.assertNotIn('run_id', result.data['task'])
+        self.assertTrue(result.warnings)
+
+    def test_model_clarification_fallback_preserves_preview_only(self):
+        response = {'decision':'clarify', 'task':None, 'message':'需要数量。', 'questions':['要多少？']}
+        with self.fake_model(response) as (factory, _), \
+             patch.object(planner, 'execute_task', side_effect=AssertionError('preview only')):
+            result = planner.execute_request('只预览，跑100步，先不计算', settings=self.settings,
+                                             live=True, use_llm=True, client_factory=factory)
+        self.assertTrue(result.ok, result.to_dict())
+        self.assertTrue(result.data['plan_only'])
+        self.assertEqual(result.data['task']['total_candidate_budget'], 100)
+
+    def test_model_cannot_inject_engineering_policy(self):
+        response = self.decision(total_candidate_budget=100)
+        response['task']['optimization_policy'] = {'unvalidated': True}
+        with self.fake_model(response) as (factory, _):
+            result = planner.plan_task('跑100步', settings=self.settings, use_llm=True, client_factory=factory)
+        self.assertEqual(result.error['code'], 'PLANNER_SCHEMA')
+
     def test_model_interrupt_is_structured_and_logged(self):
         def interrupt():
             raise KeyboardInterrupt()

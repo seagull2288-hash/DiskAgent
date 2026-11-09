@@ -26,6 +26,7 @@ def main(argv=None):
     mode.add_argument('--case', action='store_true', help='Read the current case without starting work.')
     mode.add_argument('--request', help='One natural-language check, optimize or status request.')
     mode.add_argument('--analyze-run', metavar='RUN_ID', help='Analyze saved measured results without API/FEA calls.')
+    mode.add_argument('--search-diagnostics', metavar='RUN_ID', help='Compare search and GP models locally without API/FEA calls.')
     mode.add_argument('--workflow-status', metavar='WORKFLOW_ID', help='Read a saved workflow and its bound run.')
     mode.add_argument('--resume-workflow', metavar='WORKFLOW_ID', help='Resume a saved workflow; preview unless --live.')
     mode.add_argument('--app', action='store_true', help='Start the local browser workbench at http://127.0.0.1:8765.')
@@ -49,7 +50,7 @@ def main(argv=None):
         parser.error('--verify-native requires --analyze-run.')
     if args.port is not None and (not args.app or not 1<=args.port<=65535):
         parser.error('--port requires --app and a value from 1 to 65535.')
-    if args.live and (args.app or args.analyze_run is not None or args.workflow_status is not None):
+    if args.live and (args.app or args.analyze_run is not None or args.search_diagnostics is not None or args.workflow_status is not None):
         parser.error('--live applies only to task/request execution or workflow resume.')
     if args.app:
         from .web import serve
@@ -64,7 +65,10 @@ def main(argv=None):
     try:
         # Operational logging goes to stderr; stdout stays a single JSON result.
         with redirect_stdout(sys.stderr):
-            if args.analyze_run is not None:
+            if args.search_diagnostics is not None:
+                from .search_diagnostics import inspect_search_diagnostics
+                result = inspect_search_diagnostics(args.search_diagnostics)
+            elif args.analyze_run is not None:
                 result = analyze_run(args.analyze_run,verify_native=args.verify_native)
             elif args.workflow_status is not None:
                 result = get_workflow_status(args.workflow_status)

@@ -1,0 +1,37 @@
+{
+  "schema_version": "disk.engineering-profile.v1",
+  "status": "native_verified",
+  "modal_analysis_name": "DiskAgent Prestressed Axisymmetric",
+  "maximum_modes": 6,
+  "family": "axisymmetric_fixed_order",
+  "nodal_diameter": 0,
+  "prestress_required": true,
+  "operating_angular_velocity_rad_s": 1349.3,
+  "pressure_mpa": -131.85,
+  "material": "Structural Steel",
+  "density_kg_m3": 7850,
+  "mesh_size_mm": 0.5,
+  "acceptance_design": {
+    "X1": 21.013,
+    "X2": 49.425,
+    "X3": 52.972,
+    "X4": 23.288,
+    "X5": 7.6,
+    "Y1": 45.922,
+    "Y2": 8.1777,
+    "Y3": 7.3988,
+    "Y4": 20.1
+  },
+  "acceptance_frequencies_hz": [
+    848.4426979897678,
+    2806.5257585973004,
+    5585.088091338767,
+    6326.07960045631,
+    8846.488156309706,
+    13308.402987656807
+  ],
+  "acceptance_evidence": "D:\\DSV_20261022_1\\python_llm_runs\\engineering_acceptance_20261108_102344_597227\\modal_solve\\mechanical_verified.json",
+  "native_collection_verified": true,
+  "native_collection_evidence": "D:\\DSV_20261022_1\\python_llm_runs\\engineering_acceptance_20261108_102344_597227\\native_collection_check\\mechanical_verified.json",
+  "acceptance_mass_kg": 36.13030657288775
+}

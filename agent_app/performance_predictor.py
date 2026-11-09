@@ -12,7 +12,7 @@ from pathlib import Path
 
 import numpy as np
 
-from python_control import controller, runtime, surrogate
+from python_control import controller, local_surrogate, runtime, surrogate
 from python_control.sampling import normalize, signature
 from python_control.search import DEFAULT_CONFIG, load_search_config
 
@@ -36,7 +36,8 @@ _LIMITATIONS = [
 ]
 # File reads happen once while importing code, never inside the pure predictor.
 _CODE_SIGNATURE = signature({name: hashlib.sha256(Path(path).read_bytes()).hexdigest()
-    for name, path in (('predictor', __file__), ('surrogate', surrogate.__file__))})
+    for name, path in (('predictor', __file__), ('surrogate', surrogate.__file__),
+                       ('local_surrogate', local_surrogate.__file__))})
 
 
 def _fail(message, code='PREDICTION_INPUT'):
@@ -97,8 +98,11 @@ def _problem(problem):
 
 def _config(cfg):
     c = _native_json(cfg)
-    if type(c) is not dict or set(c) != set(DEFAULT_CONFIG):
+    required = set(DEFAULT_CONFIG)
+    if type(c) is not dict or set(c) not in (required, required | {'selection_policy'}):
         _fail('Prediction requires the complete existing search configuration.')
+    if c.get('selection_policy', 'legacy_v1') not in ('legacy_v1', 'hybrid_local_v2', 'hybrid_local_v3'):
+        _fail('Unsupported selection policy.')
     if c['strategy'] not in ('direct', 'center_only', 'center_surrogate'):
         _fail('Unsupported search strategy.')
     for key in ('seed', 'initial_lhs', 'exploration_slots'):
@@ -144,8 +148,18 @@ def _history(history, problem):
         _fail('History must be a list of committed observations from one run.')
     xs = []
     for point in h:
-        if type(point) is not dict or set(point) != _HISTORY_FIELDS:
+        if (type(point) is not dict or not _HISTORY_FIELDS.issubset(point)
+                or set(point) - _HISTORY_FIELDS - {'mass_kg', 'frequency_hz', 'modal_frequencies_hz'}):
             _fail('Training observations must be canonical committed measurements, without prediction fields.')
+        for metric in ('mass_kg', 'frequency_hz'):
+            if metric in point:
+                _finite(point[metric], metric, positive=True)
+        if 'modal_frequencies_hz' in point:
+            frequencies = point['modal_frequencies_hz']
+            if type(frequencies) is not list or len(frequencies) != 6:
+                _fail('A recorded modal vector must contain six measured frequencies.')
+            for value in frequencies:
+                _finite(value, 'measured modal frequency', positive=True)
         parameters = point['parameters']
         if type(parameters) is not dict or set(parameters) != set(_NAMES):
             _fail('Each observation requires exactly nine named parameters.')
@@ -169,10 +183,54 @@ def _base(history, problem, cfg):
         'unique_samples': len(history), 'minimum_samples': cfg['surrogate_min_samples'],
         'validation': {'enabled': False, 'measured_samples': len(history),
                        'predictions_are_measurements': False},
-        'model_version': MODEL_VERSION, 'model_code_signature': _CODE_SIGNATURE,
+        'model_version': MODEL_VERSION, 'model_scope': 'global', 'model_code_signature': _CODE_SIGNATURE,
         'data_signature': signature(history), 'problem_signature': signature(problem),
         'config_signature': signature(cfg), 'role': 'shadow_only',
         'predictions': [], 'limitations': list(_LIMITATIONS)}
+
+
+def _local_support_mask(z, report, history, problem, cfg):
+    """Reconstruct the saved local support from measured coordinates.
+
+    The model's boolean mask is checked against this descriptor. The same
+    reconstruction verifies immutable before-solve audits without refitting.
+    """
+    support = report.get('support')
+    if type(support) is not dict or support.get('geometry') != 'linf_box':
+        raise ValueError('A local model requires a reproducible support box.')
+    anchor_index = support.get('anchor_training_history_index_0based')
+    if type(anchor_index) is not int or not 0 <= anchor_index < len(history):
+        raise ValueError('Invalid measured anchor index.')
+    measured = normalize([[point['parameters'][name] for name in problem['input_order']]
+                          for point in history], problem)
+    anchor = measured[anchor_index]
+    radius = support.get('radius_fraction')
+    maximum = support.get('maximum_nearest_distance')
+    if (type(radius) not in (int, float) or not math.isfinite(radius) or
+            radius != cfg['sigma_start'] or type(maximum) not in (int, float) or
+            not math.isfinite(maximum) or maximum != min(cfg['surrogate_max_distance'],
+                                                        radius * math.sqrt(len(anchor)))):
+        raise ValueError('Local support thresholds differ from the saved configuration.')
+    lower, upper = np.maximum(anchor - radius, 0.0), np.minimum(anchor + radius, 1.0)
+    for key, expected in (('anchor_normalized', anchor), ('lower_normalized', lower),
+                          ('upper_normalized', upper)):
+        values = support.get(key)
+        if (type(values) is not list or len(values) != len(anchor) or
+                any(type(value) not in (int, float) or not math.isfinite(value) for value in values) or
+                not np.allclose(values, expected, rtol=0, atol=1e-12)):
+            raise ValueError('Local support coordinates do not match measured evidence.')
+    indices = report.get('final_training_history_indices_0based')
+    if (type(indices) is not list or len(indices) < cfg['surrogate_min_samples'] or
+            any(type(index) is not int or not 0 <= index < len(history) for index in indices) or
+            indices != sorted(set(indices))):
+        raise ValueError('Local support requires the actual final training indices.')
+    sampled = np.unique(np.linspace(0, len(history) - 1,
+                                   min(len(history), cfg['surrogate_max_samples']), dtype=int))
+    inside_measured = np.all((measured >= lower - 1e-12) & (measured <= upper + 1e-12), axis=1)
+    if indices != sampled[inside_measured[sampled]].tolist():
+        raise ValueError('Final local training indices do not match the saved support.')
+    nearest = np.sqrt(((z[:, None, :] - measured[indices][None, :, :]) ** 2).sum(axis=2).min(axis=1))
+    return np.all((z >= lower - 1e-12) & (z <= upper + 1e-12), axis=1) & (nearest <= maximum)
 
 
 def predict_snapshot(history, problem, cfg, candidates=None) -> dict:
@@ -197,6 +255,10 @@ def predict_snapshot(history, problem, cfg, candidates=None) -> dict:
             _fail('Prediction candidates must be distinct from history and each other.', 'PREDICTION_DUPLICATE')
         requested.append(x)
     result = _base(h, p, c)
+    local = c.get('selection_policy') == 'hybrid_local_v3'
+    if local:
+        result.update(model_version=local_surrogate.MODEL_VERSION, model_scope='local')
+        result['limitations'][1] = '标准差经训练期滚动OOF残差膨胀及下限校准，覆盖率未经独立认证。'
     if not h:
         result.update(status='no_baseline', reason='no_committed_baseline')
         return result
@@ -205,7 +267,8 @@ def predict_snapshot(history, problem, cfg, candidates=None) -> dict:
         return result
     try:
         with np.errstate(all='raise'):
-            model, report = surrogate.fit_validated(h, p, c)
+            fit = local_surrogate.fit_local_validated if local else surrogate.fit_validated
+            model, report = fit(h, p, c)
         report = _native_json(report)
         if type(report) is not dict or type(report.get('enabled')) is not bool:
             raise ValueError('Invalid GP validation report.')
@@ -220,6 +283,12 @@ def predict_snapshot(history, problem, cfg, candidates=None) -> dict:
                 distance = np.sqrt(((z[:, None, :] - normalize(xs, p)[None, :, :]) ** 2).sum(axis=2).min(axis=1))
             if len(mean) != len(requested) or len(std) != len(requested):
                 raise ValueError('Model returned mismatched predictions.')
+            if local:
+                support_mask = np.asarray(model.support_mask(z))
+                verified_mask = _local_support_mask(z, report, h, p, c)
+                if (support_mask.dtype != np.dtype(bool) or support_mask.shape != (len(requested),) or
+                        not np.array_equal(support_mask, verified_mask)):
+                    raise ValueError('Model support mask disagrees with its saved training region.')
             predictions = []
             for i, x in enumerate(requested):
                 mu, sigma, dist = float(mean[i]), float(std[i]), float(distance[i])
@@ -229,8 +298,12 @@ def predict_snapshot(history, problem, cfg, candidates=None) -> dict:
                 predictions.append({'x': x, 'predicted_stress_mpa': mu,
                     'predictive_std_mpa': sigma, 'distance_to_measurements': dist,
                     'within_training_neighborhood': dist <= c['surrogate_max_distance']})
+                if local:
+                    predictions[-1].update(within_validated_region=bool(support_mask[i]),
+                                           eligible_for_ranking=bool(support_mask[i]))
             result['predictions'] = predictions
-        result.update(status='ready', reason='cross_validation_and_forward_holdout_passed')
+        result.update(status='ready', reason=report.get('reason', 'rolling_cv_and_forward_holdout_passed')
+                      if local else 'cross_validation_and_forward_holdout_passed')
     except Exception as exc:
         result.update(status='validation_failed', reason='numerical_or_prediction_unavailable',
             predictions=[], validation={'enabled': False, 'measured_samples': len(h),

@@ -59,7 +59,7 @@ class ControllerIntegrationTests(unittest.TestCase):
         self.logs.__enter__()
         self.addCleanup(self.logs.__exit__,None,None,None)
 
-    def fake_proposal(self, api, problem, history, output, *, live):
+    def fake_proposal(self, api, problem, history, output, *, live, client=None):
         self.assertTrue(live)
         self.proposals += 1
         Path(output).mkdir(parents=True,exist_ok=True)
@@ -89,6 +89,23 @@ class ControllerIntegrationTests(unittest.TestCase):
                                     live=True,settings=self.settings)
         self.assertTrue(result.ok,result.to_dict())
         return result
+
+    def test_adapter_passes_persisted_evaluation_identity_to_the_native_wrapper(self):
+        directories = []
+
+        def native(x, settings, problem, output_root, baseline=None, *, evaluation_dir=None):
+            self.assertIsNotNone(evaluation_dir)
+            snapshot = runtime.read_json(Path(output_root).parent / 'checkpoint.json')
+            saved = snapshot['pending'] if baseline is not None else snapshot['baseline_evaluation']
+            self.assertEqual(saved['evaluation_dir'], evaluation_dir)
+            directories.append(evaluation_dir)
+            return self.fake_evaluate(x, settings, problem, output_root, baseline)
+
+        native.supports_durable_evaluation = True
+        with patch.object(tools, 'evaluate_native', new=native):
+            result = self.new_run(total=1)
+        self.assertEqual(len(set(directories)), 2)
+        self.assertEqual(result.data['completed_candidates'], 1)
 
     def test_real_controller_commits_baseline_candidates_and_status(self):
         result = self.new_run()

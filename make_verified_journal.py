@@ -8,12 +8,12 @@ ROOT = Path(__file__).resolve().parent
 def pystr(value):
     return 'u' + json.dumps(str(value).replace('\\', '/'), ensure_ascii=True)
 
-def create(x, journal, result, complete):
+def create(x, journal, result, complete, project=None):
     folder = Path(journal).parent
     if any(Path(p).exists() for p in (journal, result, complete)):
         raise RuntimeError('Fresh evaluation files are required')
     x = [round(float(v), 4) for v in x]
-    project = ROOT / 'project_v2' / '2dmodel.wbpj'
+    project = Path(project) if project is not None else ROOT / 'project_v2' / '2dmodel.wbpj'
     cad_files = list((ROOT/'cad').glob('*.prt'))
     if len(cad_files) != 1:
         raise RuntimeError('Expected one independent CAD copy')

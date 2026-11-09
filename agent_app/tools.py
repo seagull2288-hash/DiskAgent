@@ -56,6 +56,7 @@ def _snapshot_data(run_dir: Path) -> dict[str, Any]:
     problem = runtime.bridge.load_problem(run_dir / 'problem.json')
     history = state['history']
     best = None
+    minimum_mass = None
     if history:
         for i, point in enumerate(history):
             if not isinstance(point, dict):
@@ -72,6 +73,12 @@ def _snapshot_data(run_dir: Path) -> dict[str, Any]:
                 raise TaskValidationError('CHECKPOINT_RESULT', 'Committed geometry is not the canonical nine-parameter design.')
             if runtime.bridge.finite_number(point.get('area_m2'), 'area_m2') <= 0:
                 raise TaskValidationError('CHECKPOINT_RESULT', 'Committed section area must be positive.')
+            if point.get('mass_kg') is not None:
+                mass = runtime.bridge.finite_number(point['mass_kg'], 'mass_kg')
+                if mass <= 0:
+                    raise TaskValidationError('CHECKPOINT_RESULT', 'Committed disk mass must be positive.')
+                if minimum_mass is None or mass < minimum_mass['mass_kg']:
+                    minimum_mass = {'iteration': i, 'mass_kg': mass}
         index = min(range(len(history)), key=lambda i: history[i]['stress_mpa'])
         point = history[index]
         detail = state['baseline'] if index == 0 else state['records'][index-1]['detail']
@@ -81,7 +88,7 @@ def _snapshot_data(run_dir: Path) -> dict[str, Any]:
                 'native_report_file': detail.get('nativeReportFile'),
                 'evaluation_directory': detail.get('runDir')}
     pending = state.get('pending')
-    return {
+    result = {
         'case_id': CASE_ID, 'run_id': run_dir.name, 'run_dir': str(run_dir),
         'run_status': state['status'], 'completed_candidates': state['nCompleted'],
         'target_total_candidates': state['nLLM'],
@@ -89,6 +96,7 @@ def _snapshot_data(run_dir: Path) -> dict[str, Any]:
         'baseline_evaluations_completed': int(state['baseline'] is not None),
         'baseline_stress_mpa': history[0]['stress_mpa'] if history else None,
         'best': best,
+        'minimum_mass': minimum_mass,
         'pending': {key: pending.get(key) for key in ('iteration', 'phase')} if isinstance(pending, dict) else None,
         'result_basis': 'committed_controller_checkpoint',
         'native_records_reverified_by_adapter': False,
@@ -96,6 +104,12 @@ def _snapshot_data(run_dir: Path) -> dict[str, Any]:
         'last_error': {key: runtime.safe_text(state['lastError'].get(key, '')) for key in ('type', 'message', 'time')}
                       if isinstance(state.get('lastError'), dict) else None,
     }
+    if state.get('optimization_policy') is not None:
+        from python_control.objectives import archive
+        result['optimization'] = archive(history, state['optimization_policy'])
+        result['optimization']['observations'] = [dict(point, iteration=i) for i, point in enumerate(history)]
+    result['design_selection'] = controller.selection_summary(history, result.get('optimization'))
+    return result
 
 
 def get_run_status(run_id=None, *, settings=None) -> ToolResult:
@@ -224,7 +238,7 @@ def execute_task(payload, *, live=False, settings=None, on_run_bound=None,
                     raise TaskValidationError('RUN_CHANGED', 'Run advanced before execution; additional budget must be recalculated.')
                 resume_start_checked = True
 
-            def tracked_evaluator(x, evaluation_settings, problem, output_root, baseline=None):
+            def tracked_evaluator(x, evaluation_settings, problem, output_root, baseline=None, *, evaluation_dir=None):
                 nonlocal owned_run
                 guard_resume_start()
                 candidate = Path(output_root).resolve().parent
@@ -241,21 +255,31 @@ def execute_task(payload, *, live=False, settings=None, on_run_bound=None,
                     if not isinstance(proposal,dict):
                         raise TaskValidationError('FEEDBACK_CANDIDATE','Evaluator has no committed candidate to audit.')
                     feedback_proposer.ensure_candidate(proposal,problem,saved['history'],candidate)
-                if baseline is not None:
+                if baseline is not None and search_config['strategy'] != 'direct':
                     # Shadow predictions are durable before candidate FEA. They
                     # never affect the original proposal, budget or observations.
                     from .prediction_audit import record_before_solve
                     record_before_solve(candidate, x, problem, settings=evaluation_settings)
-                return evaluate_native(x, evaluation_settings, problem, output_root, baseline)
+                options = {'evaluation_dir': evaluation_dir} if evaluation_dir is not None else {}
+                return evaluate_native(x, evaluation_settings, problem, output_root, baseline, **options)
+
+            tracked_evaluator.supports_durable_evaluation = (
+                getattr(evaluate_native, 'supports_durable_evaluation', False) is True)
 
             api = runtime.bridge.load_config(current.api_config)
+            from python_control.search import load_search_config
+            search_config = load_search_config(current.root)
             run_options = {'evaluator': tracked_evaluator}
+            if search_config['strategy'] == 'direct':
+                from .direct_proposals import DirectProposer
+                direct_propose = DirectProposer(search_config)
+                run_options['proposal_fn'] = direct_propose
             if validated.run_dir is not None or feedback_proposer is not None:
                 # Guard before a provider request too, not only before an FEA call.
                 from python_control.search import SearchProposer, load_search_config
                 search_config = load_search_config(current.root)
                 proposer = (feedback_proposer if feedback_proposer is not None else
-                            runtime.bridge.propose if search_config['strategy'] == 'direct' else SearchProposer(search_config))
+                            direct_propose if search_config['strategy'] == 'direct' else SearchProposer(search_config))
 
                 def tracked_proposer(*args, **kwargs):
                     guard_resume_start()

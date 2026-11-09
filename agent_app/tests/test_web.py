@@ -281,6 +281,25 @@ class WebTests(unittest.TestCase):
         self.assertEqual(self.request('GET', '/api/runs/run_test/analysis')[0], 200)
         self.analysis.assert_called_once_with('run_test', settings=self.settings, verify_native=False)
 
+    def test_optimization_trace_endpoint_is_readonly_and_has_no_prediction_call(self):
+        folder = self.save_run()
+        before = (folder / 'checkpoint.json').read_bytes()
+        result = ToolResult(True, 'optimization_trace', 'read', {
+            'strategy': 'direct', 'llm_direct_candidates': 3, 'records': []})
+        with patch('agent_app.optimization_trace.inspect_optimization_trace', return_value=result) as inspect:
+            status, response, _ = self.request('GET', '/api/runs/run_test/optimization-trace')
+            self.assertEqual(status, 200)
+            self.assertEqual(response['data']['llm_direct_candidates'], 3)
+            inspect.assert_called_once_with('run_test', settings=self.settings)
+        self.assertEqual((folder / 'checkpoint.json').read_bytes(), before)
+        self.predictor.assert_not_called()
+        self.run.assert_not_called()
+
+    def test_optimization_trace_rejects_unknown_run_before_reading(self):
+        with patch('agent_app.optimization_trace.inspect_optimization_trace') as inspect:
+            self.assertEqual(self.request('GET', '/api/runs/run_missing/optimization-trace')[0], 404)
+            inspect.assert_not_called()
+
     def test_predictions_endpoint_is_explicit_readonly_and_keeps_gp_status(self):
         folder = self.save_run(done=4, target=8)
         before = {str(path.relative_to(folder)): path.read_bytes() for path in folder.rglob('*') if path.is_file()}

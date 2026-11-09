@@ -7,6 +7,7 @@ from typing import Any, Mapping
 
 CASE_ID = 'disk_2d_current'
 OBJECTIVE = 'minimize_maximum_von_mises_stress'
+CONFIGURED_OBJECTIVE = 'configured_objectives'
 TASK_SCHEMA = 'disk-agent.task.v1'
 RESULT_SCHEMA = 'disk-agent.result.v1'
 
@@ -26,6 +27,7 @@ class TaskSpec:
     additional_candidate_budget: int | None = None
     run_id: str | None = None
     schema_version: str = TASK_SCHEMA
+    optimization_policy: dict | None = None
 
     @classmethod
     def from_dict(cls, value: Mapping[str, Any] | TaskSpec) -> TaskSpec:
@@ -41,10 +43,22 @@ class TaskSpec:
             raise TaskValidationError('OPERATION', 'operation must be check, optimize or status.')
         if value.get('case_id', CASE_ID) != CASE_ID:
             raise TaskValidationError('CASE_ID', 'This adapter supports only ' + CASE_ID + '.')
-        if value.get('objective', OBJECTIVE) != OBJECTIVE:
+        objective = value.get('objective', OBJECTIVE)
+        if objective not in (OBJECTIVE, CONFIGURED_OBJECTIVE):
             raise TaskValidationError('OBJECTIVE', 'The current case only minimizes maximum von Mises stress.')
         if value.get('schema_version', TASK_SCHEMA) != TASK_SCHEMA:
             raise TaskValidationError('TASK_SCHEMA', 'Unsupported task schema version.')
+        if value.get('optimization_policy') is not None:
+            from python_control.objectives import validate_policy, ControllerError
+            try:
+                value = dict(value, optimization_policy=validate_policy(value['optimization_policy']))
+            except (ValueError, ControllerError) as exc:
+                raise TaskValidationError('OPTIMIZATION_POLICY', str(exc)) from exc
+            if value['operation'] != 'optimize':
+                raise TaskValidationError('OPTIMIZATION_POLICY', 'Objective policies apply to optimization tasks only.')
+            value['objective'] = CONFIGURED_OBJECTIVE
+        elif objective == CONFIGURED_OBJECTIVE:
+            raise TaskValidationError('OPTIMIZATION_POLICY', 'Configured objectives require an optimization policy.')
         for key in ('total_candidate_budget', 'additional_candidate_budget'):
             budget = value.get(key)
             if budget is not None and (type(budget) is not int or budget < 1):

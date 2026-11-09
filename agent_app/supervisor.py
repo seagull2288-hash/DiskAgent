@@ -34,6 +34,9 @@ def _response(store, state, *, status=None, ok=None, preview=None):
                     (state.pending_batch or {}).get('execution_started')))
     if preview is not None:
         data['preview'] = preview
+    if state.task and state.task.get('optimization_policy') is not None:
+        from python_control.objectives import policy_id
+        data['optimization_policy_id'] = policy_id(state.task['optimization_policy'])
     return ToolResult(ok,'workflow',status or state.status,data,
                       state.error if not ok else None,list(state.warnings))
 
@@ -318,7 +321,7 @@ def _run_optimization(store,state,current,*,live):
 
 
 def run_workflow(request=None,*,task=None,live=False,use_llm=False,context_run_id=None,settings=None,
-                 on_workflow_created=None):
+                 on_workflow_created=None, optimization_policy=None):
     """Create and plan one persisted workflow; optimize is preview-only by default."""
     store = state = None
     try:
@@ -348,12 +351,20 @@ def run_workflow(request=None,*,task=None,live=False,use_llm=False,context_run_i
                 state.text_plan_only = plan.data['plan_only']
             else:
                 spec = TaskSpec.from_dict(task)
+            if optimization_policy is not None:
+                if spec.operation != 'optimize':
+                    raise TaskValidationError('OPTIMIZATION_POLICY', 'Objective policies apply to optimization tasks only.')
+                spec = TaskSpec.from_dict(dict(spec.to_dict(), optimization_policy=optimization_policy))
             state.task = spec.to_dict()
             store.record(state,'planned')
             if state.text_plan_only:
                 return _response(store,state)
             store.record(state,'validating')
             validated = validate_task(spec,settings=current)
+            current = validated.settings
+            if current.optimization_policy is not None and spec.optimization_policy is None:
+                spec = TaskSpec.from_dict(dict(spec.to_dict(), optimization_policy=current.optimization_policy))
+                state.task = spec.to_dict()
             state.run_id = validated.run_dir.name if validated.run_dir else None
             state.start_completed_candidates = validated.completed_candidates
             state.target_total_candidates = validated.target_total_candidates
@@ -406,6 +417,8 @@ def resume_workflow(workflow_id,*,live=False,settings=None):
                 return _response(store,state,ok=False)
             if state.engine_definition is None:
                 raise TaskValidationError('WORKFLOW_INCOMPLETE','Initial task validation did not commit; submit a corrected request.')
+            if state.task.get('optimization_policy') is not None:
+                current = current.for_policy(state.task['optimization_policy'])
             return _dispatch(store,state,current,live=live)
     except (Exception,KeyboardInterrupt) as exc:
         return _failed(store,state,exc) if state is not None else _bare_error(exc)

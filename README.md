@@ -12,6 +12,7 @@
 - [搜索中心、采样与代理筛选](README_搜索中心与代理筛选.md)
 - [自然语言规划器](README_自然语言规划器.md)
 - [结构化任务接口](README_智能体任务接口.md)
+- [Workbench MCP接入与对话调用](README_MCP接入.md)
 - [原Python优化入口与本机配置](README_先读我.md)
 - [Git版本管理与恢复注意事项](README_Git版本管理.md)
 

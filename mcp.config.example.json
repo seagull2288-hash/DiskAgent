@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "diskagent_workbench": {
+      "command": "D:/DSV_20261022_1/.venv-mcp/Scripts/python.exe",
+      "args": ["-X", "utf8", "-B", "D:/DSV_20261022_1/agent_app/mcp_server.py", "--app-url", "http://127.0.0.1:8768"]
+    }
+  }
+}

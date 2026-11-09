@@ -7,6 +7,7 @@ __pycache__/
 .coverage
 htmlcov/
 .venv/
+.venv-mcp/
 venv/
 env/
 .vscode/
@@ -33,6 +34,8 @@ id_ed25519
 /agent_workflows/
 /agent_plans/
 /agent_app_logs/
+/agent_jobs/
+/agent_chats/
 
 # Transient logs, locks, temporary files and backups
 *.log
@@ -65,3 +68,25 @@ Desktop.ini
 /project_v2/**/*.err
 /project_v2/**/*.out
 /project_v2/**/ds.dat
+
+# Verified modal project source; generated solver products stay local.
+/project_modal/**/session_files/
+/project_modal/**/.project_cache
+/project_modal/**/user_files/DesignPointLog.csv
+/project_modal/**/*.r[0-9][0-9][0-9]
+/project_modal/**/*.DSP
+/project_modal/**/*.mntr
+/project_modal/**/CAERepOutput.xml
+/project_modal/**/*.rst
+/project_modal/**/*.rth
+/project_modal/**/*.full
+/project_modal/**/*.emat
+/project_modal/**/*.esav
+/project_modal/**/*.osav
+/project_modal/**/*.mode
+/project_modal/**/*.rdb
+/project_modal/**/*.ldhi
+/project_modal/**/*.db
+/project_modal/**/*.err
+/project_modal/**/*.out
+/project_modal/**/ds.dat

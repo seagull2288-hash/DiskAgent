@@ -187,6 +187,58 @@ def assert_mesh_preserved(before, after, preserve_counts):
                 raise RuntimeError("The existing mesh count changed: " + name)
 
 
+def mesh_quality_snapshot():
+    # v202 public API exposes statistics for the selected mesh histogram metric.
+    # The selector is restored; mesh generation/settings are never requested here.
+    result = {"status": "unavailable", "source": "Mechanical.Model.Mesh statistics",
+              "metrics": {}, "acceptance_thresholds": None, "selector_restored": True}
+    try:
+        mesh_data = ExtAPI.DataModel.MeshDataByName("Global")
+        if mesh_data is None or int(mesh_data.NodeCount) <= 0 or int(mesh_data.ElementCount) <= 0:
+            result["reason"] = "No populated native mesh is available for statistics"
+            return result
+        from Ansys.Mechanical.DataModel.Enums import MeshMetricType
+        mesh = Model.Mesh
+        original = mesh.MeshMetric
+    except Exception as error:
+        result["reason"] = unicode(error)
+        return result
+    result["original_selector"] = unicode(original)
+    try:
+        for name, choice in [("element_quality", MeshMetricType.ElementQuality),
+                             ("jacobian_ratio", MeshMetricType.JacobianRatio)]:
+            try:
+                mesh.MeshMetric = int(choice)
+                statistics = {}
+                for key, property_name in [("minimum", "Minimum"), ("maximum", "Maximum"),
+                                           ("mean", "Average"), ("standard_deviation", "StandardDeviation")]:
+                    value = getattr(mesh, property_name)
+                    if hasattr(value, "Value"):
+                        value = value.Value
+                    statistics[key] = finite(value, "mesh " + name + " " + key)
+                if (statistics["minimum"] > statistics["mean"]
+                        or statistics["mean"] > statistics["maximum"]
+                        or statistics["standard_deviation"] < 0):
+                    raise RuntimeError("Mesh quality statistics are inconsistent")
+                if all(statistics[key] == 0 for key in ("minimum", "maximum", "mean", "standard_deviation")):
+                    raise RuntimeError("Native mesh statistics returned only unpopulated zero values")
+                statistics["status"] = "available"
+                statistics["selector"] = unicode(choice)
+                result["metrics"][name] = statistics
+            except Exception as error:
+                result["metrics"][name] = {"status": "unavailable", "reason": unicode(error)}
+    finally:
+        try:
+            mesh.MeshMetric = original
+            result["selector_restored"] = mesh.MeshMetric == original
+        except Exception as error:
+            result["selector_restored"] = False
+            result["restore_error"] = unicode(error)
+    available = sum(1 for item in result["metrics"].values() if item.get("status") == "available")
+    result["status"] = "available" if available == 2 else "partial" if available else "unavailable"
+    return result
+
+
 def checked_working_dir(solution):
     raw = unicode(solution.WorkingDir)
     report["actual"]["reported_working_directory"] = raw
@@ -458,6 +510,12 @@ try:
             raise RuntimeError("The new native solver output contains an error banner")
     if report["actual"]["new_error_messages"]:
         raise RuntimeError("Mechanical reported a new error during this repair solve")
+    progress("collect_mesh_quality")
+    try:
+        report["actual"]["mesh_quality_after"] = mesh_quality_snapshot()
+    except Exception as quality_error:
+        report["actual"]["mesh_quality_after"] = {"status": "unavailable", "metrics": {},
+            "reason": unicode(quality_error), "acceptance_thresholds": None}
     report["success"] = True
     report["stage"] = "complete"
 except Exception as error:

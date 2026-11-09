@@ -66,14 +66,27 @@ class PredictionIntegrationTests(unittest.TestCase):
         return result
 
     def use_smooth_direct_fixture(self):
-        # The existing fake direct proposer walks X1 by .01 mm and its fake
-        # evaluator supplies a smooth stress sequence. This gives a real local
-        # GP enough measured fixture data without any provider requests.
+        # Historical audit tests use deterministic fixture dimensions under the
+        # legacy strategy. Production direct mode now skips prediction entirely.
         path = self.root / 'python_control/search_config.json'
         config = runtime.read_json(path)
-        config['strategy'] = 'direct'
+        config['strategy'] = 'center_surrogate'
+        config['selection_policy'] = 'legacy_v1'
         runtime.write_json(path, config)
-        tools.entry.check_environment.return_value['search_strategy'] = 'direct'
+        owner = self
+
+        class SmoothLegacyProposer:
+            def __init__(self, cfg):
+                self.config = cfg
+
+            def __call__(self, *args, **kwargs):
+                return owner.fake_proposal(*args, **kwargs)
+
+        disabled_feedback = supervisor.default_feedback_policy(enabled=False)
+        for item in (patch('python_control.search.SearchProposer', SmoothLegacyProposer),
+                     patch.object(supervisor, 'default_feedback_policy', return_value=disabled_feedback)):
+            item.start()
+            self.addCleanup(item.stop)
 
     def test_pre_records_are_durable_before_fea_and_insufficient_data_has_no_predictions(self):
         result = self.start(total=6)

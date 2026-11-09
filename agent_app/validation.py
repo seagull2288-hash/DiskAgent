@@ -9,6 +9,7 @@ from python_control import controller
 from python_control.runtime import Settings, bridge, load_settings, read_json
 
 from .schemas import TaskSpec, TaskValidationError
+from .record_trash import is_deleted
 
 
 @dataclass(frozen=True)
@@ -28,17 +29,26 @@ def resolve_run(settings: Settings, run_id: str | None) -> Path:
         if not isinstance(latest, dict) or not isinstance(latest.get('runDir'), str):
             raise TaskValidationError('RUN_REFERENCE', 'Invalid latest_run.json.')
         candidate = Path(latest['runDir']).resolve()
+        if candidate.parent == root and is_deleted(candidate):
+            available = [folder for folder in root.iterdir()
+                         if folder.name.startswith('run_') and folder.is_dir()
+                         and (folder / 'checkpoint.json').is_file() and not is_deleted(folder)]
+            if not available:
+                raise TaskValidationError('RUN_NOT_FOUND', '当前没有可用的运行记录，请新建优化。')
+            candidate = max(available, key=lambda folder: (folder / 'checkpoint.json').stat().st_mtime_ns).resolve()
     else:
         candidate = (root / run_id).resolve()
     # Direct children only, including after resolving symlinks/junctions.
     if candidate.parent != root or not candidate.name.startswith('run_'):
         raise TaskValidationError('RUN_PATH', 'Run must be a direct child of the Python output directory.')
-    if not candidate.is_dir():
+    if not candidate.is_dir() or is_deleted(candidate):
         raise TaskValidationError('RUN_NOT_FOUND', 'Requested Python run does not exist.')
     return candidate
 
 
 def read_checkpoint(run_dir: Path) -> dict[str, Any]:
+    if is_deleted(run_dir):
+        raise TaskValidationError('RUN_NOT_FOUND', '该运行已从列表删除。')
     state = read_json(run_dir / 'checkpoint.json')
     if not isinstance(state, dict) or state.get('schema') != controller.SCHEMA or state.get('controller') != 'python':
         raise TaskValidationError('CHECKPOINT_SCHEMA', 'A current Python checkpoint.json is required; MATLAB .mat is unsupported.')
@@ -63,6 +73,8 @@ def read_checkpoint(run_dir: Path) -> dict[str, Any]:
 def validate_task(payload: dict[str, Any] | TaskSpec, *, settings: Settings | None = None) -> ValidatedTask:
     spec = TaskSpec.from_dict(payload)  # Reject malformed requests before environment access.
     current = settings if settings is not None else load_settings()
+    if spec.optimization_policy is not None:
+        current = current.for_policy(spec.optimization_policy)
     problem = bridge.load_problem(current.problem_file)
     if problem.get('workbench_parameter_ids') != ['P8', 'P9', 'P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7'] or problem.get('decimals') != 4:
         raise TaskValidationError('CASE_MAPPING', 'The fixed case requires its existing parameter mapping and four decimals.')
@@ -70,7 +82,12 @@ def validate_task(payload: dict[str, Any] | TaskSpec, *, settings: Settings | No
     done = 0
     if spec.run_id is not None or spec.operation == 'status':
         run_dir = resolve_run(current, spec.run_id)
-        done = read_checkpoint(run_dir)['nCompleted']
+        checkpoint = read_checkpoint(run_dir)
+        done = checkpoint['nCompleted']
+        saved_policy = checkpoint.get('definition', {}).get('optimization_policy')
+        if (spec.operation == 'optimize' and spec.optimization_policy is None
+                and current.optimization_policy is None and saved_policy is not None):
+            current = current.for_policy(saved_policy)
     target = None
     if spec.operation == 'optimize':
         target = (done + spec.additional_candidate_budget if spec.additional_candidate_budget is not None

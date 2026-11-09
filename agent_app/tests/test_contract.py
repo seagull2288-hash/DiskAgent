@@ -279,7 +279,7 @@ class ToolTests(FixtureCase):
             self.assertEqual(target,'UNUSED_TEST_KEY')
             try: yield
             finally: events.append('auth_exit')
-        def controller_run(settings,resume,*,evaluator):
+        def controller_run(settings,resume,*,evaluator,proposal_fn=None):
             events.append('controller')
             self.assertEqual(settings.candidate_count,1)
             self.assertIsNone(resume)
