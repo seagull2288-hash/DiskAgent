@@ -60,6 +60,23 @@ class WebTests(unittest.TestCase):
             item.stop()
         self.temp.cleanup()
 
+    def test_external_preview_and_listing_are_api_free(self):
+        self.server.external.settings = SimpleNamespace(
+            problem_file=Path(__file__).resolve().parents[2]/'api_bridge'/'problem.json')
+        code, case, _ = self.request('GET', '/api/external/case')
+        self.assertEqual(code, 200)
+        parameters = {v['name']: v['reference'] for v in case['problem']['variables']}
+        code, result, _ = self.request('POST', '/api/external/candidates', {'parameters': parameters, 'live': False})
+        self.assertEqual(code, 200)
+        self.assertEqual(result['internal_model_api_calls'], 0)
+        self.assertFalse(result['solver_started'])
+        self.assertEqual(self.request('GET', '/api/external/candidates')[1]['candidates'], [])
+        self.run.assert_not_called()
+
+    def test_external_write_retains_csrf_protection(self):
+        code, _, _ = self.request('POST', '/api/external/candidates', {'live': True}, csrf=False)
+        self.assertNotEqual(code, 200)
+
     def request(self, method, path, value=None, *, headers=None, raw=None, csrf=True):
         body = raw if raw is not None else json.dumps(value, ensure_ascii=False).encode('utf-8') if value is not None else None
         current = {}

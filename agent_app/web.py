@@ -85,6 +85,8 @@ class _Server(ThreadingHTTPServer):
 
     def __init__(self, settings, port):
         self.settings = settings
+        from .external import ExternalService
+        self.external = ExternalService(settings)
         self.store = WorkflowStore(settings)
         self.csrf_token = secrets.token_urlsafe(32)
         self.jobs = {}
@@ -376,6 +378,10 @@ class _Handler(BaseHTTPRequestHandler):
                                         'active_job_id': active, 'startup_execution': False})
             if path == '/api/workflows':
                 return self._json(200, self.server.workflows())
+            if path == '/api/external/case':
+                return self._json(200, self.server.external.case())
+            if path == '/api/external/candidates':
+                return self._json(200, self.server.external.list())
             if path == '/api/runs':
                 return self._json(200, self.server.runs())
             parts = path.strip('/').split('/')
@@ -411,6 +417,11 @@ class _Handler(BaseHTTPRequestHandler):
         try:
             self._local(write=True)
             path, value = self._path(), self._body()
+            if path == '/api/external/candidates':
+                if set(value) - {'parameters', 'candidate_id', 'live'}:
+                    raise TaskValidationError('WEB_FIELDS', 'Unknown candidate fields.')
+                return self._json(200, self.server.external.submit(value.get('parameters'),
+                                  value.get('candidate_id'), live=value.get('live', False)))
             if path == '/api/workflows':
                 allowed = {'request', 'live', 'use_llm', 'context_run_id'}
                 if set(value) - allowed:

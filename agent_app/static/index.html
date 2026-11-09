@@ -15,13 +15,25 @@
 <main class="layout">
 <aside>
 <section class="panel"><div class="eyebrow">NEW TASK</div><h2 class="section-title">描述本次优化任务</h2>
+<label class="field-label" for="execution-mode">优化驱动方式</label>
+<select id="execution-mode"><option value="api">API 自动优化（沿用现有模型配置）</option><option value="external">外部 AI / MCP（ChatGPT 等，不调用内部模型 API）</option></select>
+<p class="hint" id="mode-description">API 模式由 DiskAgent 内部模型生成候选。</p>
+<section id="external-panel" class="hidden">
+<p>先连接 MCP，再让外部 AI 读取案例、提出候选并调用求解。此处也可手动粘贴九参数 JSON。选择此模式不会自动连接 ChatGPT。</p>
+<button id="external-case">读取参数与连接说明</button>
+<textarea class="request" id="external-parameters" placeholder='{"X1":20.813,"X2":49.425,"X3":52.972,"X4":23.288,"X5":7.6,"Y1":45.922,"Y2":8.1777,"Y3":7.3988,"Y4":20.1}'></textarea>
+<div class="actions"><button id="external-preview">校验候选</button><button id="external-solve" class="live">求解此候选</button></div>
+<button id="external-refresh">刷新外部求解记录</button>
+<pre class="code" id="external-output">外部 AI 负责候选搜索；DiskAgent 仅校验与求解。Workbench 计算仍需有效许可证。MCP 连接说明见 README_MCP.md。</pre>
+</section>
+<div id="api-panel">
 <textarea class="request" id="request" maxlength="4000" placeholder="例如：新建优化4个候选，最小化轮盘最大应力"></textarea>
 <p class="hint">请明确真实候选数量；续算请说明“追加”或“总预算”。基准评价另计。</p>
 <button class="example" data-example="新建优化4个候选，最小化最大应力">新建 4 个候选</button><button class="example" data-example="检查当前轮盘优化环境">检查环境</button>
 <label class="field-label" for="context">已有运行上下文（可选）</label><select id="context"><option value="">新任务 / 按文字指定</option></select>
 <label class="checkbox"><input type="checkbox" id="use-llm"><span>启用规划 LLM <span class="muted">（会调用 API，默认关闭）</span></span></label>
 <div class="actions"><button class="primary" id="preview">预览任务</button><button class="live" id="start">开始真实计算</button></div>
-<p class="caption">预览优化只做规划和校验；真实计算会调用优化 LLM 与 Workbench。关闭页面不停止任务；服务需保持运行。</p></section>
+<p class="caption">预览优化只做规划和校验；真实计算会调用优化 LLM 与 Workbench。关闭页面不停止任务；服务需保持运行。</p></div></section>
 <section class="panel"><div class="list-title"><h2>工作流</h2><button class="small-button" id="refresh">刷新</button></div><div class="list" id="workflows"><div class="empty">正在读取…</div></div></section>
 <section class="panel"><div class="list-title"><h2>已有运行</h2><span class="muted">只读分析</span></div><div class="list" id="runs"><div class="empty">正在读取…</div></div></section>
 </aside>
@@ -219,5 +231,16 @@ function render(detail,kind,id){const d=detail.data||{};const wf=d.state||{};con
 async function refresh(){if(state.refreshing){state.refreshQueued=true;return;}state.refreshing=true;try{const [flows,runs]=await Promise.all([api('/api/workflows'),api('/api/runs')]);showList('workflows',flows.workflows||[],'workflow');showList('runs',runs.runs||[],'run');const selectedContext=$('context').value;const fragment=document.createDocumentFragment();const initial=document.createElement('option');initial.value='';initial.textContent='新任务 / 按文字指定';fragment.append(initial);for(const run of runs.runs||[]){const option=document.createElement('option');option.value=run.run_id;option.textContent=run.run_id;fragment.append(option)}$('context').replaceChildren(fragment);$('context').value=selectedContext;if(!state.job&&flows.active_job_id)state.job=flows.active_job_id;if(state.job){const result=await api('/api/jobs/'+encodeURIComponent(state.job));const job=result.job;if(job.status==='completed'){busy(false);state.job=null;const r=job.result||{};if(job.workflow_id){state.kind='workflow';state.selected=job.workflow_id;if(state.pendingPreview&&r.ok){state.lastPreview=job.workflow_id;state.previewSignature=state.pendingSignature}}state.pendingPreview=false;const wfStatus=r.data?.state?.status||r.data?.workflow_status||r.status;if(!r.ok){message(r.error?.message||'任务未成功，请查看工作流记录。',true)}else if(['validated','planned'].includes(r.status)){message(wfStatus==='planned'?'任务单已保存。请求包含只规划指令时，将保持不执行。':'任务已校验，尚未真实计算。可以继续执行同一工作流。')}else{message('本次操作已完成，结果以工作流与已提交记录为准。')}}else{busy(true);if(job.workflow_id&&state.jobFocused!==job.job_id){state.kind='workflow';state.selected=job.workflow_id;state.reportKey=null;state.jobFocused=job.job_id;}message('后台任务执行中 · '+(job.workflow_id||job.job_id))}}else busy(!!flows.active_job_id);if(!state.selected&&(flows.workflows||[]).length){state.kind='workflow';state.selected=flows.workflows[0].workflow_id}if(state.selected){const path=state.kind==='workflow'?'/api/workflows/'+encodeURIComponent(state.selected):'/api/runs/'+encodeURIComponent(state.selected)+'/analysis';const selectedId=state.selected,selectedKind=state.kind;const detail=await api(path);if(selectedId!==state.selected||selectedKind!==state.kind){state.refreshQueued=true;return;}render(detail,selectedKind,selectedId);if(state.kind==='workflow'&&detail.data?.report_file){const key=state.selected+':'+String(detail.data.state?.revision);if(key!==state.reportKey){const report=await api('/api/workflows/'+encodeURIComponent(selectedId)+'/report');if(state.selected===selectedId&&state.kind===selectedKind){text('report',report);state.reportKey=key}}}else{text('report',state.kind==='run'?'已有运行可查看结果与证据；工作流完成分析后生成报告。':'此工作流尚无已生成的结果报告。')}}text('connection','● 本地已连接')}catch(error){message(error.message,true);text('connection','● 连接或读取失败')}finally{state.refreshing=false;if(state.refreshQueued){state.refreshQueued=false;queueMicrotask(refresh);}}}
 $('preview').addEventListener('click',()=>submit(false));$('start').addEventListener('click',()=>submit(true));$('resume-preview').addEventListener('click',()=>resume(false));$('resume-live').addEventListener('click',()=>resume(true));$('refresh').addEventListener('click',refresh);for(const id of ['request','context','use-llm'])$(id).addEventListener('input',clearPreview);document.querySelectorAll('[data-example]').forEach(el=>el.addEventListener('click',()=>{$('request').value=el.dataset.example;clearPreview()}));document.querySelectorAll('[data-tab]').forEach(button=>button.addEventListener('click',()=>{document.querySelectorAll('[data-tab]').forEach(el=>el.classList.toggle('active',el===button));for(const key of ['results','feedback','predictions','task','report'])$('tab-'+key).classList.toggle('hidden',key!==button.dataset.tab);if(button.dataset.tab==='predictions')loadPredictions()}));$('refresh-predictions').addEventListener('click',loadPredictions);
 (async()=>{try{const config=await api('/api/config');state.token=config.csrf_token;state.job=config.active_job_id;await refresh();setInterval(refresh,3000)}catch(error){message(error.message,true);text('connection','● 无法连接本地服务')}})();
+
+let externalCandidateId=null;
+function setExecutionMode(){const external=$('execution-mode').value==='external';$('external-panel').classList.toggle('hidden',!external);$('api-panel').classList.toggle('hidden',external);text('mode-description',external?'外部 AI 提供候选，求解结果持久保存，供网页和 MCP 共同读取。':'API 模式由 DiskAgent 内部模型生成候选。');localStorage.setItem('diskagent.execution-mode',external?'external':'api');clearPreview()}
+$('execution-mode').value=localStorage.getItem('diskagent.execution-mode')==='external'?'external':'api';
+$('execution-mode').addEventListener('change',setExecutionMode);setExecutionMode();
+$('external-parameters').addEventListener('input',()=>{externalCandidateId=null});
+async function externalAction(live){$('external-preview').disabled=true;$('external-solve').disabled=true;try{const parameters=JSON.parse($('external-parameters').value);if(!externalCandidateId)externalCandidateId='candidate_'+crypto.randomUUID().replaceAll('-','');const result=await api('/api/external/candidates',{method:'POST',body:JSON.stringify({parameters,candidate_id:externalCandidateId,live})});text('external-output',JSON.stringify(result,null,2));if(live)message('已提交单候选求解；点击刷新外部求解记录查询。内部模型 API 调用为 0。')}catch(error){message(error.message,true)}finally{$('external-preview').disabled=false;$('external-solve').disabled=false}}
+$('external-preview').addEventListener('click',()=>externalAction(false));$('external-solve').addEventListener('click',()=>externalAction(true));
+$('external-case').addEventListener('click',async()=>{try{text('external-output',JSON.stringify(await api('/api/external/case'),null,2)+'\nMCP：本地客户端运行 python -m agent_app.mcp_server；HTTP 模式 http://127.0.0.1:8766/mcp。ChatGPT 云端需可达的认证 HTTPS 服务，详见 README_MCP.md。')}catch(error){message(error.message,true)}});
+$('external-refresh').addEventListener('click',async()=>{try{text('external-output',JSON.stringify(await api('/api/external/candidates'),null,2))}catch(error){message(error.message,true)}});
+
 </script>
 </body></html>

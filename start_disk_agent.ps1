@@ -1,6 +1,6 @@
 param([ValidateRange(1,65535)][int]$Port=8765)
 $ErrorActionPreference='Stop'
-$diskPython='C:\Users\18940\.conda\envs\llm_opt\python.exe'
+$diskPython=Join-Path $PSScriptRoot '.venv\Scripts\python.exe'
 $diskAppUrl="http://127.0.0.1:$Port"
 if (-not (Test-Path -LiteralPath $diskPython -PathType Leaf)) {
     throw "Python environment not found: $diskPython"
