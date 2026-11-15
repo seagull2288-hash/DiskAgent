@@ -30,7 +30,7 @@
 
 ## 本机运行
 
-已有环境可双击 `start_disk_agent.cmd`，工作台地址为 http://127.0.0.1:8765/ 。启动器中的Python路径使用当前电脑环境；换电脑需先调整该路径。
+已有环境可双击 `start_disk_agent.cmd`，工作台地址为 http://127.0.0.1:8765/ 。启动器会依次检查 `DISKAGENT_PYTHON`、项目 `.venv`、用户的 `llm_opt` 环境和 PATH 中的 Python；需要 Python 3.10 以上及 NumPy、Matplotlib。可设置 `DISKAGENT_PYTHON` 指定解释器。
 
 首次检出到新目录时，复制 `python_control/optimization_config.example.json` 为 `python_control/optimization_config.json`，填写本机真实Workbench可执行文件位置，并准备Python环境、NumPy、Matplotlib、ANSYS 2020 R2及许可证。实际API密钥放入该配置指定的用户环境变量。
 

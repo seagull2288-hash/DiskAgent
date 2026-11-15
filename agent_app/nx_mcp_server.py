@@ -23,6 +23,12 @@ def create_mcp(root=None):
         return service.status()
 
     @mcp.tool(annotations=read)
+    def nx_plan_description(description: str):
+        """Parse an explicit Chinese disk description locally; returns questions or a reviewable plan, never starts NX."""
+        from .nx_modeling.language import plan_local
+        return plan_local(description)
+
+    @mcp.tool(annotations=read)
     def nx_preview_disk(plan: dict):
         """Validate a parameterized disk and return its normalized plan; no CAD process is started."""
         return service.preview(plan)

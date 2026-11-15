@@ -6,6 +6,7 @@ stable boundary between an LLM/UI and vendor-specific NXOpen journals.
 from __future__ import annotations
 
 from dataclasses import dataclass
+import math
 import re
 
 
@@ -67,6 +68,8 @@ class DiskPlan:
                 raise ModelingPlanError('孔阵列超出圆盘外径。')
             if bcd / 2 - bhd / 2 <= center / 2:
                 raise ModelingPlanError('孔阵列与中心孔相交。')
+            if count > 1 and bcd * math.sin(math.pi / count) <= bhd:
+                raise ModelingPlanError('相邻螺栓孔相交或相切。')
         elif bcd or bhd:
             raise ModelingPlanError('孔数为0时不能设置孔阵列尺寸。')
         fmt = value.get('output_format', 'prt')

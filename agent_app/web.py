@@ -693,6 +693,13 @@ class _Handler(BaseHTTPRequestHandler):
             self._local(write=True)
             path, value = self._path(), self._body()
             parts = path.strip('/').split('/')
+            if path == '/api/nx/plan':
+                if set(value) != {'description', 'mode'} or value['mode'] not in ('local', 'llm'):
+                    raise TaskValidationError('NX_FIELDS', '请输入建模描述及解析方式。')
+                from .nx_modeling.language import plan_local, plan_llm
+                result = (plan_local(value['description']) if value['mode'] == 'local'
+                          else plan_llm(value['description'], self.server.settings))
+                return self._json(200, result)
             if path in ('/api/nx/preview', '/api/nx/execute'):
                 from .nx_modeling import NXModelingService
                 service = NXModelingService(self.server.settings.root)

@@ -14,14 +14,18 @@ async def main():
     root = Path(__file__).resolve().parents[2]
     params = StdioServerParameters(command=sys.executable,
         args=['-m', 'agent_app.nx_mcp_server', '--root', str(root)], cwd=str(root), env=os.environ.copy())
-    plan = {'kind': 'disk', 'name': 'mcp_acceptance_disk', 'outer_diameter': 100,
-            'thickness': 10, 'center_hole_diameter': 20, 'bolt_circle_diameter': 60,
-            'bolt_hole_diameter': 8, 'bolt_hole_count': 4, 'output_format': 'prt'}
+    description = '创建圆盘，外径100毫米，厚度10毫米，中心孔径20毫米，孔数4，孔径8毫米，节圆直径60毫米'
     async with stdio_client(params) as (read, write):
         async with ClientSession(read, write, read_timeout_seconds=timedelta(seconds=360)) as session:
             await session.initialize()
             tools = await session.list_tools()
             print('TOOLS', [item.name for item in tools.tools], flush=True)
+            parsed = await session.call_tool('nx_plan_description', {'description': description})
+            payload = parsed.structuredContent or json.loads(parsed.content[0].text)
+            print('nx_plan_description', json.dumps(payload, ensure_ascii=False), flush=True)
+            if parsed.isError or payload.get('status') != 'planned':
+                return 1
+            plan = payload['plan']
             for name, args in [('nx_connection_status', {}), ('nx_preview_disk', {'plan': plan}),
                                ('nx_create_disk', {'plan': plan, 'live': True,
                                                    'request_id': 'nx-live-acceptance-20261115-1'})]:
