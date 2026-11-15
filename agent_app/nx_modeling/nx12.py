@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 import subprocess
 
@@ -31,14 +32,16 @@ import NXOpen.Features
 PLAN = json.loads(%r)
 OUTPUT = %s
 
-def cylinder(part, diameter, height, x=0.0, y=0.0, subtract=False):
+def cylinder(part, diameter, height, x=0.0, y=0.0, target=None):
     builder = part.Features.CreateCylinderBuilder(NXOpen.Features.Cylinder.Null)
     builder.Diameter.RightHandSide = str(diameter)
     builder.Height.RightHandSide = str(height)
     builder.Origin = NXOpen.Point3d(x, y, 0.0)
     builder.Direction = NXOpen.Vector3d(0.0, 0.0, 1.0)
     builder.BooleanOption.Type = (NXOpen.GeometricUtilities.BooleanOperation.BooleanType.Subtract
-        if subtract else NXOpen.GeometricUtilities.BooleanOperation.BooleanType.Create)
+        if target is not None else NXOpen.GeometricUtilities.BooleanOperation.BooleanType.Create)
+    if target is not None:
+        builder.BooleanOption.SetTargetBodies([target])
     feature = builder.CommitFeature()
     builder.Destroy()
     return feature
@@ -53,15 +56,16 @@ def main():
     file_new.MakeDisplayedPart = True
     part = file_new.Commit()
     file_new.Destroy()
-    cylinder(part, PLAN['outer_diameter'], PLAN['thickness'])
+    disk = cylinder(part, PLAN['outer_diameter'], PLAN['thickness'])
+    body = disk.GetBodies()[0]
     if PLAN['center_hole_diameter'] > 0:
-        cylinder(part, PLAN['center_hole_diameter'], PLAN['thickness'], subtract=True)
+        cylinder(part, PLAN['center_hole_diameter'], PLAN['thickness'], target=body)
     if PLAN['bolt_hole_count']:
         radius = PLAN['bolt_circle_diameter'] / 2.0
         for index in range(PLAN['bolt_hole_count']):
             angle = 2.0 * math.pi * index / PLAN['bolt_hole_count']
             cylinder(part, PLAN['bolt_hole_diameter'], PLAN['thickness'],
-                     radius * math.cos(angle), radius * math.sin(angle), True)
+                     radius * math.cos(angle), radius * math.sin(angle), body)
     part.Save(NXOpen.BasePart.SaveComponents.TrueValue, NXOpen.BasePart.CloseAfterSave.FalseValue)
 
 if __name__ == '__main__':
@@ -73,8 +77,13 @@ def run_journal(journal: Path, nx_home=None, timeout=300):
     info = discover(nx_home)
     if not info['available']:
         raise ModelingPlanError('未找到 NX 12.0 或 run_journal.exe。')
-    completed = subprocess.run([info['runner'], str(journal)], cwd=info['nx_home'],
-                               capture_output=True, text=True, timeout=timeout,
-                               creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
+    home = Path(info['nx_home'])
+    ugii = home.parent / 'UGII'
+    env = os.environ.copy()
+    env['UGII_BASE_DIR'] = str(home.parent)
+    env['UGII_ROOT_DIR'] = str(ugii)
+    env['PATH'] = str(home) + os.pathsep + str(ugii) + os.pathsep + env.get('PATH', '')
+    completed = subprocess.run([info['runner'], str(journal)], cwd=str(ugii), env=env,
+                               stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=timeout)
     return {'returncode': completed.returncode, 'stdout': completed.stdout[-20000:],
             'stderr': completed.stderr[-20000:]}

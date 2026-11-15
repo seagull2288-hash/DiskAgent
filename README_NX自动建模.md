@@ -28,6 +28,7 @@ NX12 Adapter ── NXOpen Journal ── .prt + result.json
 - MCP 不接收任意脚本或任意输出路径，LLM 只能选择已注册模板和参数。
 - 默认预览；真实建模要求 `live=true` 和稳定 `request_id`。
 - 每次执行保留规范化计划、SHA-256、Journal、stdout/stderr 和产物状态。
+- `request_id` 当前仅用于追踪，不提供幂等去重；超时后应先检查本机任务记录，避免重复执行。
 
 ## 本机配置与启动
 
@@ -40,6 +41,10 @@ MCP 独立启动：
 ```powershell
 & '.\.venv-mcp\Scripts\python.exe' -X utf8 -m agent_app.nx_mcp_server --root .
 ```
+
+MCP 客户端启动服务时须将本机 `SPLM_LICENSE_SERVER` 传入服务环境。NX 子进程会配置安装目录、隔离标准输入；许可不可用时不会生成模型。
+
+2026-11-15 在本机使用 MCP stdio 实际创建圆盘：直径 100 mm、厚 10 mm、中心孔直径 20 mm、4 个直径 8 mm 的节圆孔。重新打开 `.prt`，NX 报告 1 个实体、8 个面、6 个圆柱特征；特征表达式与上述尺寸一致。该验收不代表与 Workbench 的自动优化闭环已完成。
 
 ## 后续扩展
 

@@ -15,7 +15,7 @@ def create_mcp(root=None):
         'Use nx_preview_disk first. Only nx_create_disk with live=true launches NX. '
         'The server accepts registered parameters, never arbitrary NXOpen code or output paths.'))
     read = ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False)
-    write = ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False)
+    write = ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False)
 
     @mcp.tool(annotations=read)
     def nx_connection_status():

@@ -90,3 +90,4 @@ Desktop.ini
 /project_modal/**/*.err
 /project_modal/**/*.out
 /project_modal/**/ds.dat
+nx_modeling_jobs/
