@@ -27,6 +27,7 @@ from .mcp_jobs import JobStore
 MAX_BODY = 16 * 1024
 _JOB_ID = re.compile(r'job_[a-f0-9]{24}')
 _HTML = Path(__file__).parent / 'static' / 'index.html'
+_MODELING_HTML = _HTML.parent / 'modeling.html'
 
 
 # Lazy imports keep server startup independent of expensive tool modules.
@@ -585,6 +586,10 @@ class _Handler(BaseHTTPRequestHandler):
             path = self._path()
             if path == '/':
                 return self._send(200, _HTML.read_bytes(), 'text/html; charset=utf-8')
+            if path == '/modeling':
+                return self._send(200, _MODELING_HTML.read_bytes(), 'text/html; charset=utf-8')
+            if path == '/modeling.js':
+                return self._send(200, (_HTML.parent / 'modeling.js').read_bytes(), 'text/javascript; charset=utf-8')
             if path == '/objectives.js':
                 return self._send(200, (_HTML.parent / 'objectives.js').read_bytes(), 'text/javascript; charset=utf-8')
             if path == '/chat.js':
@@ -596,6 +601,9 @@ class _Handler(BaseHTTPRequestHandler):
             if path == '/api/mesh-study':
                 from .mesh_study import read_latest
                 return self._json(200, read_latest(self.server.settings))
+            if path == '/api/nx/status':
+                from .nx_modeling import NXModelingService
+                return self._json(200, NXModelingService(self.server.settings.root).status())
             if path == '/api/config':
                 with self.server.jobs_lock:
                     active = self.server.active_job_id
@@ -685,6 +693,16 @@ class _Handler(BaseHTTPRequestHandler):
             self._local(write=True)
             path, value = self._path(), self._body()
             parts = path.strip('/').split('/')
+            if path in ('/api/nx/preview', '/api/nx/execute'):
+                from .nx_modeling import NXModelingService
+                service = NXModelingService(self.server.settings.root)
+                if set(value) - {'plan', 'request_id'} or 'plan' not in value:
+                    raise TaskValidationError('NX_FIELDS', '只接受 plan 与 request_id。')
+                if path.endswith('/preview'):
+                    if 'request_id' in value:
+                        raise TaskValidationError('NX_FIELDS', '预览不需要 request_id。')
+                    return self._json(200, service.preview(value['plan']))
+                return self._json(200, service.execute(value['plan'], value.get('request_id', '')))
             if path == '/api/preflight':
                 if set(value) - {'run_id', 'optimization_policy'}:
                     raise TaskValidationError('WEB_FIELDS', '体检仅接受运行ID与目标约束配置。')
