@@ -1,0 +1,33 @@
+import NXOpen
+import NXOpen.Features
+import math
+import json
+plan=json.loads(__PLAN_JSON__)
+s=NXOpen.Session.GetSession()
+p=s.Parts.NewDisplay(__OUTPUT__, NXOpen.Part.Units.Millimeters)
+pts=[(83,-45.921294),(103.81175,-45.921294),(153.237291,-8.1765525),(206.210705,-7.398638),(229.5,-20),(237,-20),(237,20),(229.5,20),(206.210705,7.398638),(153.237291,8.1765525),(103.81175,45.921294),(83,45.921294)]
+centers={1:(154.004398,-60.4140141750922),3:(206.6084729,-34.4853180006504),7:(206.6084729,34.4853180006504),9:(154.004398,60.4140141750922)}
+def point(v): return NXOpen.Point3d(float(v[0])*plan['scale'],0.0,float(v[1])*plan['scale'])
+curves=[]
+for i,a in enumerate(pts):
+    b=pts[(i+1)%len(pts)]
+    if i in centers:
+        c=centers[i]
+        t0=math.atan2(a[1]-c[1],a[0]-c[0]);t1=math.atan2(b[1]-c[1],b[0]-c[0]);delta=(t1-t0+math.pi)%(2*math.pi)-math.pi
+        radius=math.hypot(a[0]-c[0],a[1]-c[1]);tm=t0+delta/2
+        middle=(c[0]+radius*math.cos(tm),c[1]+radius*math.sin(tm))
+        curve=p.Curves.CreateArc(point(a),point(middle),point(b),False)[0]
+    else: curve=p.Curves.CreateLine(point(a),point(b))
+    curves.append(curve)
+builder=p.Features.CreateRevolveBuilder(NXOpen.Features.Feature.Null)
+builder.Section=p.Sections.CreateSection(0.001,0.001,0.5)
+rules=[p.ScRuleFactory.CreateRuleCurveDumb(curves)]
+builder.Section.AddToSection(rules,curves[0],NXOpen.NXObject.Null,NXOpen.NXObject.Null,point(pts[0]),NXOpen.Section.Mode.Create,False)
+axispoint=p.Points.CreatePoint(NXOpen.Point3d(0.0,0.0,0.0))
+direction=p.Directions.CreateDirection(NXOpen.Point3d(0.0,0.0,0.0),NXOpen.Vector3d(0.0,0.0,1.0),NXOpen.SmartObject.UpdateOption.WithinModeling)
+builder.Axis=p.Axes.CreateAxis(axispoint,direction,NXOpen.SmartObject.UpdateOption.WithinModeling)
+builder.Limits.StartExtend.Value.RightHandSide='0'
+builder.Limits.EndExtend.Value.RightHandSide=str(plan['angle'])
+feature=builder.CommitFeature()
+builder.Destroy()
+p.Save(NXOpen.BasePart.SaveComponents.TrueValue,NXOpen.BasePart.CloseAfterSave.FalseValue)

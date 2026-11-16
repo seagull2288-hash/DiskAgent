@@ -33,6 +33,17 @@ def _result(plan, notes):
 
 def plan_local(text):
     text = _description(text).lower()
+    if '参考扇区' in text:
+        from .sector import SectorPlan
+        angle_matches=re.findall(r'角度\s*[:：=为]?\s*(\d+(?:\.\d+)?)\s*度?',text)
+        scale_matches=re.findall(r'整体比例\s*[:：=为]?\s*(\d+(?:\.\d+)?)\s*倍?',text)
+        remaining=re.sub(r'(?:角度|整体比例)\s*[:：=为]?\s*\d+(?:\.\d+)?\s*(?:度|倍)?','',text)
+        remaining=re.sub(r'创建|建立|新建|生成|重建|一个|参考扇区|[,，。；;、\s]','',remaining)
+        if remaining or len(angle_matches)>1 or len(scale_matches)>1:
+            return {'ok':True,'status':'clarify','questions':['参考扇区目前只支持角度和整体比例，例如：重建参考扇区，角度15度，整体比例1。']}
+        plan=SectorPlan.parse({'kind':'reference_sector','angle':float(angle_matches[0]) if angle_matches else 15,
+                              'scale':float(scale_matches[0]) if scale_matches else 1})
+        return {'ok':True,'status':'planned','plan':plan.to_dict(),'notes':['依据 Geomshanqu 的实测轮廓重建；未指定时使用15度及比例1。'],'message':'请预览后创建参考扇区。'}
     if not re.search(r'圆盘|轮盘', text):
         return {'ok': True, 'status': 'clarify', 'questions': ['目前支持圆盘模板；请说明要创建圆盘并给出尺寸。']}
     remaining = text

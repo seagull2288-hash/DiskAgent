@@ -34,6 +34,13 @@ def create_mcp(root=None):
         return service.preview(plan)
 
     @mcp.tool(annotations=write)
+    def nx_create_reference_sector(plan: dict, live: bool = False, request_id: str = ''):
+        """Rebuild the measured Geomshanqu disk sector; supports angle (degrees) and uniform scale."""
+        from .nx_modeling.sector import SectorPlan
+        plan = SectorPlan.parse(plan).to_dict()
+        return service.execute(plan, request_id) if live else service.preview(plan)
+
+    @mcp.tool(annotations=write)
     def nx_create_disk(plan: dict, live: bool = False, request_id: str = ''):
         """Create a registered parameterized disk. live=false only validates; live=true launches NX 12."""
         return service.execute(plan, request_id) if live else service.preview(plan)

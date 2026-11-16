@@ -51,6 +51,13 @@ class NXModelingTests(unittest.TestCase):
         self.assertEqual(plan_local('创建圆盘，外径100，厚度10，倒角2')['status'], 'clarify')
         self.assertEqual(plan_local('创建圆盘，外径100，厚度10，孔数4')['status'], 'clarify')
 
+    def test_reference_sector_plan(self):
+        value=plan_local('重建参考扇区，角度15度，整体比例1')
+        self.assertEqual(value['plan']['kind'],'reference_sector')
+        self.assertEqual(value['plan']['angle'],15)
+        self.assertEqual(NXModelingService('.').preview(value['plan'])['status'],'validated')
+        self.assertEqual(plan_local('重建参考扇区，倒角2')['status'],'clarify')
+
     def test_rejects_overlapping_bolt_holes(self):
         value = self.plan()
         value.update(bolt_hole_count=128, bolt_hole_diameter=20)

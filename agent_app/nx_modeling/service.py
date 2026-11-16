@@ -9,6 +9,11 @@ import uuid
 
 from .nx12 import compile_journal, discover, run_journal
 from .schema import DiskPlan, ModelingPlanError
+from .sector import SectorPlan, compile_sector
+
+
+def parse_plan(raw):
+    return SectorPlan.parse(raw) if isinstance(raw, dict) and raw.get('kind') == 'reference_sector' else DiskPlan.parse(raw)
 
 
 class NXModelingService:
@@ -18,26 +23,27 @@ class NXModelingService:
 
     def status(self):
         return {'ok': True, 'adapter': 'siemens-nx12-journal-v1', **discover(self.nx_home),
-                'templates': ['disk'], 'live_default': False}
+                'templates': ['disk', 'reference_sector'], 'live_default': False}
 
     def preview(self, raw_plan):
-        plan = DiskPlan.parse(raw_plan)
+        plan = parse_plan(raw_plan)
         signature = hashlib.sha256(json.dumps(plan.to_dict(), sort_keys=True).encode()).hexdigest()
         return {'ok': True, 'status': 'validated', 'plan': plan.to_dict(), 'plan_sha256': signature,
                 'adapter': 'siemens-nx12-journal-v1', 'live': False,
-                'summary_zh': f'将创建直径 {plan.outer_diameter:g} mm、厚 {plan.thickness:g} mm 的参数化圆盘。'}
+                'summary_zh': (f'将重建参考扇区：角度 {plan.angle:g} 度，整体比例 {plan.scale:g}。' if isinstance(plan,SectorPlan)
+                               else f'将创建直径 {plan.outer_diameter:g} mm、厚 {plan.thickness:g} mm 的参数化圆盘。')}
 
     def execute(self, raw_plan, request_id):
         if not isinstance(request_id, str) or not request_id or len(request_id) > 128:
             raise ModelingPlanError('live执行需要稳定的 request_id（最长128字符）。')
         preview = self.preview(raw_plan)
-        plan = DiskPlan.parse(raw_plan)
+        plan = parse_plan(raw_plan)
         job_id = 'nx_' + uuid.uuid4().hex[:24]
         folder = self.root / 'nx_modeling_jobs' / job_id
         folder.mkdir(parents=True, exist_ok=False)
         output = folder / (plan.name + '.prt')
         journal = folder / 'model.py'
-        journal.write_text(compile_journal(plan, output), encoding='utf-8')
+        journal.write_text(compile_sector(plan, output) if isinstance(plan,SectorPlan) else compile_journal(plan, output), encoding='utf-8')
         record = {'job_id': job_id, 'request_id': request_id, 'created_at': datetime.now().astimezone().isoformat(),
                   'plan': plan.to_dict(), 'plan_sha256': preview['plan_sha256'], 'journal': str(journal),
                   'output': str(output), 'status': 'running'}

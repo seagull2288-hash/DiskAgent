@@ -15,6 +15,8 @@ async def main():
     params = StdioServerParameters(command=sys.executable,
         args=['-m', 'agent_app.nx_mcp_server', '--root', str(root)], cwd=str(root), env=os.environ.copy())
     description = '创建圆盘，外径100毫米，厚度10毫米，中心孔径20毫米，孔数4，孔径8毫米，节圆直径60毫米'
+    if '--sector' in sys.argv:
+        description = '重建参考扇区，角度15度，整体比例1'
     async with stdio_client(params) as (read, write):
         async with ClientSession(read, write, read_timeout_seconds=timedelta(seconds=360)) as session:
             await session.initialize()
@@ -27,7 +29,7 @@ async def main():
                 return 1
             plan = payload['plan']
             for name, args in [('nx_connection_status', {}), ('nx_preview_disk', {'plan': plan}),
-                               ('nx_create_disk', {'plan': plan, 'live': True,
+                               ('nx_create_reference_sector' if '--sector' in sys.argv else 'nx_create_disk', {'plan': plan, 'live': True,
                                                    'request_id': 'nx-live-acceptance-20261115-1'})]:
                 result = await session.call_tool(name, args)
                 print(name, result.model_dump_json(indent=2), flush=True)
