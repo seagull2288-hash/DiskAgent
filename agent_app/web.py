@@ -603,7 +603,9 @@ class _Handler(BaseHTTPRequestHandler):
                 return self._json(200, read_latest(self.server.settings))
             if path == '/api/nx/status':
                 from .nx_modeling import NXModelingService
-                return self._json(200, NXModelingService(self.server.settings.root).status())
+                status=NXModelingService(self.server.settings.root).status()
+                status['llm_configured']=bool(runtime.saved_key(getattr(self.server.settings,'key_environment_variable','Deepseek_KEYS1')))
+                return self._json(200,status)
             if path == '/api/config':
                 with self.server.jobs_lock:
                     active = self.server.active_job_id

@@ -7,5 +7,5 @@
 <label>外径 mm<input id="outer" type="number" value="300" min="0.001"></label><label>厚度 mm<input id="thickness" type="number" value="20" min="0.001"></label>
 <label>中心孔径 mm<input id="center" type="number" value="60" min="0"></label><label>螺栓孔数量<input id="count" type="number" value="6" min="0" max="128"></label>
 <label>螺栓节圆直径 mm<input id="bcd" type="number" value="200" min="0"></label><label>螺栓孔径 mm<input id="bhd" type="number" value="14" min="0"></label></div>
-<div class="actions"><button class="primary" id="preview">校验并预览</button><button class="live" id="execute">在 NX 12 中创建</button></div></section><section class="panel"><h2>NX 连接</h2><div id="connection" class="status">检查中…</div></section></div>
+<div class="actions"><button class="primary" id="preview">校验并预览</button><button class="live" id="execute">在 NX 12 中创建</button></div><p id="action-status" role="status" aria-live="polite" style="overflow-wrap:anywhere">先输入需求并点击“解析需求”。</p></section><section class="panel"><h2>NX 连接</h2><div id="connection" class="status">检查中…</div></section></div>
 <section class="panel"><h2>计划与执行证据</h2><p>本地解析示例：建立参数化参考扇区，X1=23，Y2=10，回转角15度。也可输入：建立参数化长方体，长80毫米，宽40毫米，高20毫米。</p><div id="notice" class="status">尚未预览。</div><pre id="result">{}</pre><p class="muted">产物与 Journal 记录在本机 nx_modeling_jobs/。</p></section></main><script src="/modeling.js"></script></body></html>
