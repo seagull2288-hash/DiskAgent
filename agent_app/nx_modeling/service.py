@@ -10,9 +10,11 @@ import uuid
 from .nx12 import compile_journal, discover, run_journal
 from .schema import DiskPlan, ModelingPlanError
 from .sector import SectorPlan, compile_sector
+from .features import FeaturePlan, compile_features
 
 
 def parse_plan(raw):
+    if isinstance(raw,dict) and raw.get('kind')=='feature_model': return FeaturePlan.parse(raw)
     return SectorPlan.parse(raw) if isinstance(raw, dict) and raw.get('kind') == 'reference_sector' else DiskPlan.parse(raw)
 
 
@@ -23,14 +25,15 @@ class NXModelingService:
 
     def status(self):
         return {'ok': True, 'adapter': 'siemens-nx12-journal-v1', **discover(self.nx_home),
-                'templates': ['disk', 'reference_sector'], 'live_default': False}
+                'templates': ['disk', 'reference_sector', 'feature_model'], 'live_default': False}
 
     def preview(self, raw_plan):
         plan = parse_plan(raw_plan)
         signature = hashlib.sha256(json.dumps(plan.to_dict(), sort_keys=True).encode()).hexdigest()
         return {'ok': True, 'status': 'validated', 'plan': plan.to_dict(), 'plan_sha256': signature,
                 'adapter': 'siemens-nx12-journal-v1', 'live': False,
-                'summary_zh': (f'将重建参考扇区：角度 {plan.angle:g} 度，整体比例 {plan.scale:g}。' if isinstance(plan,SectorPlan)
+                'summary_zh': (f'将通过关联轮廓{plan.operation}建立模型，包含 {len(plan.parameters)} 个命名尺寸。' if isinstance(plan,FeaturePlan) else
+                              f'将重建参考扇区：角度 {plan.angle:g} 度，整体比例 {plan.scale:g}。' if isinstance(plan,SectorPlan)
                                else f'将创建直径 {plan.outer_diameter:g} mm、厚 {plan.thickness:g} mm 的参数化圆盘。')}
 
     def execute(self, raw_plan, request_id):
@@ -43,7 +46,7 @@ class NXModelingService:
         folder.mkdir(parents=True, exist_ok=False)
         output = folder / (plan.name + '.prt')
         journal = folder / 'model.py'
-        journal.write_text(compile_sector(plan, output) if isinstance(plan,SectorPlan) else compile_journal(plan, output), encoding='utf-8')
+        journal.write_text(compile_features(plan,output) if isinstance(plan,FeaturePlan) else compile_sector(plan, output) if isinstance(plan,SectorPlan) else compile_journal(plan, output), encoding='utf-8')
         record = {'job_id': job_id, 'request_id': request_id, 'created_at': datetime.now().astimezone().isoformat(),
                   'plan': plan.to_dict(), 'plan_sha256': preview['plan_sha256'], 'journal': str(journal),
                   'output': str(output), 'status': 'running'}

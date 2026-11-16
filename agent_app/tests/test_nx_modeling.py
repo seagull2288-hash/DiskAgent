@@ -58,6 +58,18 @@ class NXModelingTests(unittest.TestCase):
         self.assertEqual(NXModelingService('.').preview(value['plan'])['status'],'validated')
         self.assertEqual(plan_local('重建参考扇区，倒角2')['status'],'clarify')
 
+    def test_native_parameterized_reference_and_custom_profile(self):
+        parsed=plan_local('建立参数化参考扇区，X1=23，Y2=10，回转角20度')
+        self.assertEqual(parsed['plan']['parameters']['X1'],23)
+        self.assertEqual(parsed['plan']['parameters']['Y2'],10)
+        self.assertEqual(parsed['plan']['amount'],'sweep_angle')
+        custom=plan_local('建立参数化拉伸，轮廓(0,0),(80,0),(80,20),(40,35),(0,20)，深度30')
+        self.assertEqual(custom['plan']['operation'],'extrude')
+        self.assertEqual(len(custom['plan']['vertices']),5)
+        from agent_app.nx_modeling.features import expression
+        for formula in ['__import__("os")','a.__class__','1/0','unknown+1']:
+            with self.assertRaises(ModelingPlanError): expression(formula,{'a':1})
+
     def test_rejects_overlapping_bolt_holes(self):
         value = self.plan()
         value.update(bolt_hole_count=128, bolt_hole_diameter=20)

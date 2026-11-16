@@ -1,0 +1,47 @@
+import NXOpen
+import NXOpen.Features
+import json
+plan=json.loads(__PLAN_JSON__)
+s=NXOpen.Session.GetSession()
+p=s.Parts.NewDisplay(__OUTPUT__,NXOpen.Part.Units.Millimeters)
+mm=p.UnitCollection.FindObject('MilliMeter')
+for key,value in plan['parameters'].items():
+    unit=p.UnitCollection.FindObject('Degrees') if key=='sweep_angle' else mm
+    p.Expressions.CreateWithUnits(key+'='+str(value),unit)
+def point(pair):
+    scalars=[]
+    for formula in [pair[0],'0',pair[1]]:
+        exp=p.Expressions.CreateSystemExpressionWithUnits(formula,mm)
+        scalars.append(p.Scalars.CreateScalarExpression(exp,NXOpen.Scalar.DimensionalityType.Length,NXOpen.SmartObject.UpdateOption.WithinModeling))
+    return p.Points.CreatePoint(*scalars,NXOpen.SmartObject.UpdateOption.WithinModeling)
+points=[point(v) for v in plan['vertices']]
+features=[];curves=[]
+for i,start in enumerate(points):
+    end=points[(i+1)%len(points)]
+    if str(i) in plan['arc_midpoints']:
+        builder=p.BaseFeatures.CreateAssociativeArcBuilder(NXOpen.Features.AssociativeArc.Null)
+        builder.Type=builder.Types.ThreePointArc
+        builder.MidPointOptions=builder.MidOption.Point
+        builder.MidPoint.Value=point(plan['arc_midpoints'][str(i)])
+    else:
+        builder=p.BaseFeatures.CreateAssociativeLineBuilder(NXOpen.Features.AssociativeLine.Null)
+    builder.Associative=True
+    builder.StartPointOptions=builder.StartOption.Point;builder.EndPointOptions=builder.EndOption.Point
+    builder.StartPoint.Value=start;builder.EndPoint.Value=end
+    feature=builder.CommitFeature();builder.Destroy()
+    features.append(feature);curves.extend(feature.GetEntities())
+builder=p.Features.CreateRevolveBuilder(NXOpen.Features.Feature.Null) if plan['operation']=='revolve' else p.Features.CreateExtrudeBuilder(NXOpen.Features.Feature.Null)
+builder.Section=p.Sections.CreateSection(0.001,0.001,0.5)
+rules=[p.ScRuleFactory.CreateRuleCurveFeature(features)]
+builder.Section.AddToSection(rules,curves[0],NXOpen.NXObject.Null,NXOpen.NXObject.Null,NXOpen.Point3d(0.0,0.0,0.0),NXOpen.Section.Mode.Create,False)
+if plan['operation']=='revolve':
+    origin=p.Points.CreatePoint(NXOpen.Point3d(0.0,0.0,0.0))
+    direction=p.Directions.CreateDirection(NXOpen.Point3d(0.0,0.0,0.0),NXOpen.Vector3d(0.0,0.0,1.0),NXOpen.SmartObject.UpdateOption.WithinModeling)
+    builder.Axis=p.Axes.CreateAxis(origin,direction,NXOpen.SmartObject.UpdateOption.WithinModeling)
+else:
+    builder.Direction=p.Directions.CreateDirection(NXOpen.Point3d(0.0,0.0,0.0),NXOpen.Vector3d(0.0,1.0,0.0),NXOpen.SmartObject.UpdateOption.WithinModeling)
+builder.Limits.StartExtend.Value.RightHandSide='0'
+builder.Limits.EndExtend.Value.RightHandSide=plan['amount']
+feature=builder.CommitFeature();builder.Destroy()
+feature.SetName('PARAMETRIC_'+plan['operation'].upper())
+p.Save(NXOpen.BasePart.SaveComponents.TrueValue,NXOpen.BasePart.CloseAfterSave.FalseValue)

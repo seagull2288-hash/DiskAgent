@@ -34,6 +34,13 @@ def create_mcp(root=None):
         return service.preview(plan)
 
     @mcp.tool(annotations=write)
+    def nx_build_feature_model(plan: dict, live: bool = False, request_id: str = ''):
+        """Build a parameterized closed line/arc profile by extrusion or revolution. Named expressions drive native NX features."""
+        from .nx_modeling.features import FeaturePlan
+        plan=FeaturePlan.parse(plan).to_dict()
+        return service.execute(plan,request_id) if live else service.preview(plan)
+
+    @mcp.tool(annotations=write)
     def nx_create_reference_sector(plan: dict, live: bool = False, request_id: str = ''):
         """Rebuild the measured Geomshanqu disk sector; supports angle (degrees) and uniform scale."""
         from .nx_modeling.sector import SectorPlan
