@@ -17,5 +17,5 @@ async def main():
                 data=json.loads(result.content[0].text)
                 if not data['ok'] or not data['reopened'] or not all(t['update_errors']==0 for t in data['parameter_tests']):raise RuntimeError(str(data))
                 records.append(data);print(data['model_id'],data['output'],len(data['parameter_tests']),'parameters verified',flush=True)
-    (root/'acceptance_mcp.json').write_text(json.dumps(records,ensure_ascii=False,indent=2),encoding='utf-8')
+    (root/'acceptance_mcp.json').write_text(json.dumps(records,ensure_ascii=False,indent=2),encoding='utf-8',newline='\n')
 if __name__=='__main__':asyncio.run(main())
