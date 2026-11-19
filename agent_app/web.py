@@ -588,6 +588,9 @@ class _Handler(BaseHTTPRequestHandler):
                 return self._send(200, _HTML.read_bytes(), 'text/html; charset=utf-8')
             if path == '/modeling':
                 return self._send(200, _MODELING_HTML.read_bytes(), 'text/html; charset=utf-8')
+            if path == '/case-modeling':
+                from nx_case_agent.core import ROOT
+                return self._send(200, (ROOT / 'index.html').read_bytes(), 'text/html; charset=utf-8')
             if path == '/modeling.js':
                 return self._send(200, (_HTML.parent / 'modeling.js').read_bytes(), 'text/javascript; charset=utf-8')
             if path == '/objectives.js':
@@ -695,6 +698,14 @@ class _Handler(BaseHTTPRequestHandler):
             self._local(write=True)
             path, value = self._path(), self._body()
             parts = path.strip('/').split('/')
+            if path in ('/api/nx/cases/plan', '/api/nx/cases/build'):
+                from nx_case_agent import plan as case_plan, execute as case_execute
+                if set(value) - {'description', 'parameters'} or 'description' not in value:
+                    raise TaskValidationError('NX_CASE_FIELDS', '只接受description与parameters。')
+                if path.endswith('/plan'):
+                    return self._json(200, case_plan(value['description'], value.get('parameters')))
+                return self._json(200, case_execute(value['description'], value.get('parameters'),
+                                                  jobs_root=self.server.settings.root / 'nx_modeling_jobs' / 'learned_cases'))
             if path == '/api/nx/plan':
                 if set(value) != {'description', 'mode'} or value['mode'] not in ('local', 'llm'):
                     raise TaskValidationError('NX_FIELDS', '请输入建模描述及解析方式。')

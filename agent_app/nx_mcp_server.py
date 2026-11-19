@@ -18,6 +18,19 @@ def create_mcp(root=None):
     write = ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False)
 
     @mcp.tool(annotations=read)
+    def nx_case_preview(description: str, parameters: dict = None):
+        """Infer a nine-parameter 2D disk or single-blade 3D disk from learned recipes; no NX execution."""
+        from nx_case_agent import plan
+        return plan(description, parameters)
+
+    @mcp.tool(annotations=write)
+    def nx_case_build(description: str, parameters: dict = None, live: bool = False):
+        """Build a learned native parameterized case with live=true; otherwise only preview inferred parameters."""
+        from nx_case_agent import plan, execute
+        return (execute(description, parameters, jobs_root=service.root / 'nx_modeling_jobs' / 'learned_cases')
+                if live else plan(description, parameters))
+
+    @mcp.tool(annotations=read)
     def nx_connection_status():
         """Check the registered NX 12 installation without launching NX."""
         return service.status()

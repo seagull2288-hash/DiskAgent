@@ -2,6 +2,8 @@
 
 本模块把“模型生成”作为独立工程能力接入 DiskAgent，并与现有 Workbench 优化解耦。
 
+2026-11-19新增可迁移的两案例智能体 `nx_case_agent/`：可从不完整描述补全参数，建立九参数二维轮盘或简化单叶片三维轮盘。工作台入口 `/case-modeling`，移交与集成说明见 `README_两案例智能体交付.md`。它与下述原有建模入口并存。
+
 ## 模块边界
 
 1. `agent_app/nx_modeling/schema.py`：CAD 无关、严格校验的建模计划。第一版注册 `disk` 模板。

@@ -1,0 +1,13 @@
+{
+  "version": "2.0",
+  "target": "Siemens NX 12.0",
+  "learning_method": "persisted_design_priors_and_native_feature_recipes",
+  "llm_weights_trained": false,
+  "cases": [
+    {"id": "geom2d", "source": "Geom2d.stp", "source_sha256": "7bfa2208c10e01871db87186c31943f4b3ddcaa32d1b1be839a0ae1340254633", "learned": "five radial spans, four half-heights, symmetric thin-web thick-end section", "native_recipe": "associative points, lines, arcs, bounded plane"},
+    {"id": "new160", "source": "new160.x_t", "source_sha256": "9004b52a1b0000718b6f75faee446ef2f0a64253e452f439f88b3403e82bfd1b", "learned": "hub-web-rim-single-blade structure and principal scales", "native_recipe": "associative profile, sector revolution, three-section blade loft, boolean union", "design_assumptions": "simplified hub profile and diamond blade sections; no root fillet"}
+  ],
+  "source_files_required_at_runtime": false,
+  "default_parameters_and_constraints": "recipes.py",
+  "verification": "acceptance_mcp.json"
+}

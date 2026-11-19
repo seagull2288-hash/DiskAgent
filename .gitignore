@@ -91,3 +91,6 @@ Desktop.ini
 /project_modal/**/*.out
 /project_modal/**/ds.dat
 nx_modeling_jobs/
+nx_case_agent/jobs/
+nx_case_agent/*.log
+nx_case_agent/library/

@@ -1,0 +1,320 @@
+[
+  {
+    "ok": true,
+    "model_id": "geom2d",
+    "output": "D:\\Codex\\Workplace\\MCP\\DiskAgent\\nx_case_agent\\jobs\\b7592ce9ce134a068dcdbb2a3da36185\\model.prt",
+    "parameterized": true,
+    "reopened": true,
+    "parameters": {
+      "inner_radius": 83.0,
+      "X1": 20.81,
+      "X2": 49.43,
+      "X3": 52.97,
+      "X4": 23.29,
+      "X5": 7.5,
+      "Y1": 45.92,
+      "Y2": 8.18,
+      "Y3": 7.4,
+      "Y4": 20.0
+    },
+    "inferred_parameters": {
+      "inner_radius": 83.0,
+      "X1": 20.81,
+      "X2": 49.43,
+      "X3": 52.97,
+      "X4": 23.29,
+      "X5": 7.5,
+      "Y1": 45.92,
+      "Y2": 8.18,
+      "Y3": 7.4,
+      "Y4": 20.0
+    },
+    "geometry": {
+      "solid": false,
+      "faces": 1,
+      "edges": 12,
+      "area_mm2": 5355.955768445561,
+      "volume_mm3": null,
+      "vertex_bounds": [
+        83.0,
+        -45.92,
+        0.0,
+        237.00000000000003,
+        45.92,
+        0.0
+      ]
+    },
+    "notes": [
+      "采用固定弓高比例圆弧替代参考样条，不保证所有连接处严格相切。"
+    ],
+    "parameter_tests": [
+      {
+        "parameter": "inner_radius",
+        "delta": 0.05,
+        "update_errors": 0,
+        "baseline": 5355.955768445561,
+        "changed": 5355.955768445557,
+        "vertex_bound_change_mm": 0.04999999999999716,
+        "restored": true
+      },
+      {
+        "parameter": "X1",
+        "delta": 0.05,
+        "update_errors": 0,
+        "baseline": 5355.955768445561,
+        "changed": 5360.547768445556,
+        "vertex_bound_change_mm": 0.049999999999954525,
+        "restored": true
+      },
+      {
+        "parameter": "X2",
+        "delta": 0.05,
+        "update_errors": 0,
+        "baseline": 5355.955768445561,
+        "changed": 5357.549392579947,
+        "vertex_bound_change_mm": 0.049999999999954525,
+        "restored": true
+      },
+      {
+        "parameter": "X3",
+        "delta": 0.05,
+        "update_errors": 0,
+        "baseline": 5355.955768445561,
+        "changed": 5356.734768445561,
+        "vertex_bound_change_mm": 0.049999999999954525,
+        "restored": true
+      },
+      {
+        "parameter": "X4",
+        "delta": 0.05,
+        "update_errors": 0,
+        "baseline": 5355.955768445561,
+        "changed": 5356.914575268239,
+        "vertex_bound_change_mm": 0.04999999999998295,
+        "restored": true
+      },
+      {
+        "parameter": "X5",
+        "delta": 0.05,
+        "update_errors": 0,
+        "baseline": 5355.955768445561,
+        "changed": 5357.95576844556,
+        "vertex_bound_change_mm": 0.04999999999998295,
+        "restored": true
+      },
+      {
+        "parameter": "Y1",
+        "delta": 0.05,
+        "update_errors": 0,
+        "baseline": 5355.955768445561,
+        "changed": 5359.659595721569,
+        "vertex_bound_change_mm": 0.04999999999999716,
+        "restored": true
+      },
+      {
+        "parameter": "Y2",
+        "delta": 0.05,
+        "update_errors": 0,
+        "baseline": 5355.955768445561,
+        "changed": 5361.92331754619,
+        "vertex_bound_change_mm": 0.0,
+        "restored": true
+      },
+      {
+        "parameter": "Y3",
+        "delta": 0.05,
+        "update_errors": 0,
+        "baseline": 5355.955768445561,
+        "changed": 5359.990546451342,
+        "vertex_bound_change_mm": 0.0,
+        "restored": true
+      },
+      {
+        "parameter": "Y4",
+        "delta": 0.05,
+        "update_errors": 0,
+        "baseline": 5355.955768445561,
+        "changed": 5357.64760861868,
+        "vertex_bound_change_mm": 0.0,
+        "restored": true
+      }
+    ],
+    "job_directory": "D:\\Codex\\Workplace\\MCP\\DiskAgent\\nx_case_agent\\jobs\\b7592ce9ce134a068dcdbb2a3da36185"
+  },
+  {
+    "ok": true,
+    "model_id": "new160",
+    "output": "D:\\Codex\\Workplace\\MCP\\DiskAgent\\nx_case_agent\\jobs\\8dd1a150c89a4dfebcb8f94cfc935a60\\model.prt",
+    "parameterized": true,
+    "reopened": true,
+    "parameters": {
+      "bore_radius": 5.2,
+      "hub_length": 56.9,
+      "hub_radius": 25.0,
+      "rim_radius": 71.7,
+      "rim_width": 20.8,
+      "web_thickness": 9.0,
+      "sector_angle": 7.66,
+      "tip_radius": 105.0,
+      "root_chord": 20.0,
+      "tip_chord": 14.0,
+      "blade_thickness": 2.5,
+      "tip_thickness": 1.5,
+      "blade_twist": 10.0
+    },
+    "inferred_parameters": {
+      "bore_radius": 5.2,
+      "hub_length": 56.9,
+      "hub_radius": 25.0,
+      "rim_radius": 71.7,
+      "rim_width": 20.8,
+      "web_thickness": 9.0,
+      "sector_angle": 7.66,
+      "tip_radius": 105.0,
+      "root_chord": 20.0,
+      "tip_chord": 14.0,
+      "blade_thickness": 2.5,
+      "tip_thickness": 1.5,
+      "blade_twist": 10.0
+    },
+    "geometry": {
+      "solid": true,
+      "faces": 19,
+      "edges": 48,
+      "area_mm2": 6555.872509938504,
+      "volume_mm3": 8449.014595011968,
+      "vertex_bounds": [
+        -28.45,
+        -4.789297500458828,
+        5.188386479037145,
+        28.45,
+        4.789297500458828,
+        105.0
+      ]
+    },
+    "notes": [
+      "盘体采用简化回转轮廓；叶片采用三截面菱形截面放样，不代表经过气动设计的翼型。",
+      "本版叶根通过实体重叠求和连接，未建立叶根圆角特征。"
+    ],
+    "parameter_tests": [
+      {
+        "parameter": "bore_radius",
+        "delta": 0.05,
+        "update_errors": 0,
+        "baseline": 8449.014595011966,
+        "changed": 8447.02724343969,
+        "vertex_bound_change_mm": 0.049888331529203356,
+        "restored": true
+      },
+      {
+        "parameter": "hub_length",
+        "delta": 0.05,
+        "update_errors": 0,
+        "baseline": 8449.014595011966,
+        "changed": 8453.571664255154,
+        "vertex_bound_change_mm": 0.02500000000000213,
+        "restored": true
+      },
+      {
+        "parameter": "hub_radius",
+        "delta": 0.05,
+        "update_errors": 0,
+        "baseline": 8449.014595011966,
+        "changed": 8457.515048604375,
+        "vertex_bound_change_mm": 0.0,
+        "restored": true
+      },
+      {
+        "parameter": "rim_radius",
+        "delta": 0.05,
+        "update_errors": 0,
+        "baseline": 8449.014595011966,
+        "changed": 8456.031027683066,
+        "vertex_bound_change_mm": 0.003339816945927332,
+        "restored": true
+      },
+      {
+        "parameter": "rim_width",
+        "delta": 0.05,
+        "update_errors": 0,
+        "baseline": 8449.014595011966,
+        "changed": 8450.878264568562,
+        "vertex_bound_change_mm": 0.0,
+        "restored": true
+      },
+      {
+        "parameter": "web_thickness",
+        "delta": 0.05,
+        "update_errors": 0,
+        "baseline": 8449.014595011966,
+        "changed": 8459.685905283206,
+        "vertex_bound_change_mm": 0.0,
+        "restored": true
+      },
+      {
+        "parameter": "sector_angle",
+        "delta": 0.05,
+        "update_errors": 0,
+        "baseline": 8449.014595011966,
+        "changed": 8500.4641197059,
+        "vertex_bound_change_mm": 0.03121469892206541,
+        "restored": true
+      },
+      {
+        "parameter": "tip_radius",
+        "delta": 0.05,
+        "update_errors": 0,
+        "baseline": 8449.014595011966,
+        "changed": 8449.876686677335,
+        "vertex_bound_change_mm": 0.05000000000001137,
+        "restored": true
+      },
+      {
+        "parameter": "root_chord",
+        "delta": 0.05,
+        "update_errors": 0,
+        "baseline": 8449.014595011966,
+        "changed": 8449.882218867793,
+        "vertex_bound_change_mm": 0.0,
+        "restored": true
+      },
+      {
+        "parameter": "tip_chord",
+        "delta": 0.05,
+        "update_errors": 0,
+        "baseline": 8449.014595011966,
+        "changed": 8449.799944997907,
+        "vertex_bound_change_mm": 0.0,
+        "restored": true
+      },
+      {
+        "parameter": "blade_thickness",
+        "delta": 0.05,
+        "update_errors": 0,
+        "baseline": 8449.014595011966,
+        "changed": 8456.242890922967,
+        "vertex_bound_change_mm": 0.0,
+        "restored": true
+      },
+      {
+        "parameter": "tip_thickness",
+        "delta": 0.05,
+        "update_errors": 0,
+        "baseline": 8449.014595011966,
+        "changed": 8455.86866317635,
+        "vertex_bound_change_mm": 0.0,
+        "restored": true
+      },
+      {
+        "parameter": "blade_twist",
+        "delta": 0.05,
+        "update_errors": 0,
+        "baseline": 8449.014595011966,
+        "changed": 8449.014330742677,
+        "vertex_bound_change_mm": 0.0,
+        "restored": true
+      }
+    ],
+    "job_directory": "D:\\Codex\\Workplace\\MCP\\DiskAgent\\nx_case_agent\\jobs\\8dd1a150c89a4dfebcb8f94cfc935a60"
+  }
+]
