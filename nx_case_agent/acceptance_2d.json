@@ -1,7 +1,7 @@
 {
   "ok": true,
   "model_id": "geom2d",
-  "output": "D:\\Codex\\Workplace\\MCP\\DiskAgent\\nx_case_agent\\jobs\\3bce719231d44eed91b777f017262962\\model.prt",
+  "output": "D:\\Codex\\Workplace\\MCP\\DiskAgent\\nx_case_agent\\jobs\\46e23036602547af9376b04f9c6009e5\\model.prt",
   "parameterized": true,
   "reopened": true,
   "parameters": {
@@ -16,23 +16,12 @@
     "Y3": 7.4,
     "Y4": 20.0
   },
-  "inferred_parameters": {
-    "inner_radius": 83.0,
-    "X1": 20.81,
-    "X2": 49.43,
-    "X3": 52.97,
-    "X4": 23.29,
-    "X5": 7.5,
-    "Y1": 45.92,
-    "Y2": 8.18,
-    "Y3": 7.4,
-    "Y4": 20.0
-  },
+  "inferred_parameters": {},
   "geometry": {
     "solid": false,
     "faces": 1,
     "edges": 12,
-    "area_mm2": 5355.955768445561,
+    "area_mm2": 6353.437197218285,
     "volume_mm3": null,
     "vertex_bounds": [
       83.0,
@@ -44,99 +33,350 @@
     ]
   },
   "notes": [
-    "采用固定弓高比例圆弧替代参考样条，不保证所有连接处严格相切。"
+    "厚薄过渡采用三次Bezier关联样条，与平直段及薄盘段保持G1切向连续；不精确复刻参考样条。"
   ],
+  "recipe_version": "2.1",
+  "derived_parameters": {},
+  "parameter_table": [
+    {
+      "name": "inner_radius",
+      "label": "内半径",
+      "value": 83.0,
+      "unit": "mm",
+      "source": "description_or_override"
+    },
+    {
+      "name": "X1",
+      "label": "X1",
+      "value": 20.81,
+      "unit": "mm",
+      "source": "description_or_override"
+    },
+    {
+      "name": "X2",
+      "label": "X2",
+      "value": 49.43,
+      "unit": "mm",
+      "source": "description_or_override"
+    },
+    {
+      "name": "X3",
+      "label": "X3",
+      "value": 52.97,
+      "unit": "mm",
+      "source": "description_or_override"
+    },
+    {
+      "name": "X4",
+      "label": "X4",
+      "value": 23.29,
+      "unit": "mm",
+      "source": "description_or_override"
+    },
+    {
+      "name": "X5",
+      "label": "X5",
+      "value": 7.5,
+      "unit": "mm",
+      "source": "description_or_override"
+    },
+    {
+      "name": "Y1",
+      "label": "Y1",
+      "value": 45.92,
+      "unit": "mm",
+      "source": "description_or_override"
+    },
+    {
+      "name": "Y2",
+      "label": "Y2",
+      "value": 8.18,
+      "unit": "mm",
+      "source": "description_or_override"
+    },
+    {
+      "name": "Y3",
+      "label": "Y3",
+      "value": 7.4,
+      "unit": "mm",
+      "source": "description_or_override"
+    },
+    {
+      "name": "Y4",
+      "label": "Y4",
+      "value": 20.0,
+      "unit": "mm",
+      "source": "description_or_override"
+    }
+  ],
+  "modeling_steps": [
+    {
+      "name": "LEARNED_NINE_PARAMETER_SECTION",
+      "type": "SKIN"
+    }
+  ],
+  "geometry_checks": {
+    "kernel": {
+      "body_consistency": "passed",
+      "face_face_intersection": "passed",
+      "face_self_intersection": "passed",
+      "faces_checked": 1
+    },
+    "transitions": {
+      "joins_checked": 8,
+      "max_gap_mm": 7.105427357601002e-15,
+      "max_tangent_angle_degrees": 0.0,
+      "passed": true
+    }
+  },
+  "reopened_geometry_checks": {
+    "body_consistency": "passed",
+    "face_face_intersection": "passed",
+    "face_self_intersection": "passed",
+    "faces_checked": 1
+  },
   "parameter_tests": [
     {
       "parameter": "inner_radius",
       "delta": 0.05,
       "update_errors": 0,
-      "baseline": 5355.955768445561,
-      "changed": 5355.955768445557,
+      "baseline": 6353.437197218285,
+      "changed": 6353.437197218302,
       "vertex_bound_change_mm": 0.04999999999999716,
-      "restored": true
+      "restored": true,
+      "geometry_checks": {
+        "kernel": {
+          "body_consistency": "passed",
+          "face_face_intersection": "passed",
+          "face_self_intersection": "passed",
+          "faces_checked": 1
+        },
+        "transitions": {
+          "joins_checked": 8,
+          "max_gap_mm": 1.5888218580782548e-14,
+          "max_tangent_angle_degrees": 0.0,
+          "passed": true
+        }
+      },
+      "derived_parameters": {}
     },
     {
       "parameter": "X1",
       "delta": 0.05,
       "update_errors": 0,
-      "baseline": 5355.955768445561,
-      "changed": 5360.547768445556,
+      "baseline": 6353.437197218285,
+      "changed": 6358.029197218301,
       "vertex_bound_change_mm": 0.049999999999954525,
-      "restored": true
+      "restored": true,
+      "geometry_checks": {
+        "kernel": {
+          "body_consistency": "passed",
+          "face_face_intersection": "passed",
+          "face_self_intersection": "passed",
+          "faces_checked": 1
+        },
+        "transitions": {
+          "joins_checked": 8,
+          "max_gap_mm": 1.5888218580782548e-14,
+          "max_tangent_angle_degrees": 0.0,
+          "passed": true
+        }
+      },
+      "derived_parameters": {}
     },
     {
       "parameter": "X2",
       "delta": 0.05,
       "update_errors": 0,
-      "baseline": 5355.955768445561,
-      "changed": 5357.549392579947,
+      "baseline": 6353.437197218285,
+      "changed": 6356.154334373685,
       "vertex_bound_change_mm": 0.049999999999954525,
-      "restored": true
+      "restored": true,
+      "geometry_checks": {
+        "kernel": {
+          "body_consistency": "passed",
+          "face_face_intersection": "passed",
+          "face_self_intersection": "passed",
+          "faces_checked": 1
+        },
+        "transitions": {
+          "joins_checked": 8,
+          "max_gap_mm": 1.4210854715202004e-14,
+          "max_tangent_angle_degrees": 1.2074182697257333e-06,
+          "passed": true
+        }
+      },
+      "derived_parameters": {}
     },
     {
       "parameter": "X3",
       "delta": 0.05,
       "update_errors": 0,
-      "baseline": 5355.955768445561,
-      "changed": 5356.734768445561,
+      "baseline": 6353.437197218285,
+      "changed": 6354.211797725283,
       "vertex_bound_change_mm": 0.049999999999954525,
-      "restored": true
+      "restored": true,
+      "geometry_checks": {
+        "kernel": {
+          "body_consistency": "passed",
+          "face_face_intersection": "passed",
+          "face_self_intersection": "passed",
+          "faces_checked": 1
+        },
+        "transitions": {
+          "joins_checked": 8,
+          "max_gap_mm": 7.105427357601002e-15,
+          "max_tangent_angle_degrees": 0.0,
+          "passed": true
+        }
+      },
+      "derived_parameters": {}
     },
     {
       "parameter": "X4",
       "delta": 0.05,
       "update_errors": 0,
-      "baseline": 5355.955768445561,
-      "changed": 5356.914575268239,
+      "baseline": 6353.437197218285,
+      "changed": 6354.801476312935,
       "vertex_bound_change_mm": 0.04999999999998295,
-      "restored": true
+      "restored": true,
+      "geometry_checks": {
+        "kernel": {
+          "body_consistency": "passed",
+          "face_face_intersection": "passed",
+          "face_self_intersection": "passed",
+          "faces_checked": 1
+        },
+        "transitions": {
+          "joins_checked": 8,
+          "max_gap_mm": 7.105427357601002e-15,
+          "max_tangent_angle_degrees": 8.537736462515939e-07,
+          "passed": true
+        }
+      },
+      "derived_parameters": {}
     },
     {
       "parameter": "X5",
       "delta": 0.05,
       "update_errors": 0,
-      "baseline": 5355.955768445561,
-      "changed": 5357.95576844556,
+      "baseline": 6353.437197218285,
+      "changed": 6355.437197218285,
       "vertex_bound_change_mm": 0.04999999999998295,
-      "restored": true
+      "restored": true,
+      "geometry_checks": {
+        "kernel": {
+          "body_consistency": "passed",
+          "face_face_intersection": "passed",
+          "face_self_intersection": "passed",
+          "faces_checked": 1
+        },
+        "transitions": {
+          "joins_checked": 8,
+          "max_gap_mm": 7.105427357601002e-15,
+          "max_tangent_angle_degrees": 0.0,
+          "passed": true
+        }
+      },
+      "derived_parameters": {}
     },
     {
       "parameter": "Y1",
       "delta": 0.05,
       "update_errors": 0,
-      "baseline": 5355.955768445561,
-      "changed": 5359.659595721569,
+      "baseline": 6353.437197218285,
+      "changed": 6357.989697462773,
       "vertex_bound_change_mm": 0.04999999999999716,
-      "restored": true
+      "restored": true,
+      "geometry_checks": {
+        "kernel": {
+          "body_consistency": "passed",
+          "face_face_intersection": "passed",
+          "face_self_intersection": "passed",
+          "faces_checked": 1
+        },
+        "transitions": {
+          "joins_checked": 8,
+          "max_gap_mm": 7.105427357601002e-15,
+          "max_tangent_angle_degrees": 0.0,
+          "passed": true
+        }
+      },
+      "derived_parameters": {}
     },
     {
       "parameter": "Y2",
       "delta": 0.05,
       "update_errors": 0,
-      "baseline": 5355.955768445561,
-      "changed": 5361.92331754619,
+      "baseline": 6353.437197218285,
+      "changed": 6358.856250359843,
       "vertex_bound_change_mm": 0.0,
-      "restored": true
+      "restored": true,
+      "geometry_checks": {
+        "kernel": {
+          "body_consistency": "passed",
+          "face_face_intersection": "passed",
+          "face_self_intersection": "passed",
+          "faces_checked": 1
+        },
+        "transitions": {
+          "joins_checked": 8,
+          "max_gap_mm": 7.105427357601002e-15,
+          "max_tangent_angle_degrees": 0.0,
+          "passed": true
+        }
+      },
+      "derived_parameters": {}
     },
     {
       "parameter": "Y3",
       "delta": 0.05,
       "update_errors": 0,
-      "baseline": 5355.955768445561,
-      "changed": 5359.990546451342,
+      "baseline": 6353.437197218285,
+      "changed": 6356.95114643318,
       "vertex_bound_change_mm": 0.0,
-      "restored": true
+      "restored": true,
+      "geometry_checks": {
+        "kernel": {
+          "body_consistency": "passed",
+          "face_face_intersection": "passed",
+          "face_self_intersection": "passed",
+          "faces_checked": 1
+        },
+        "transitions": {
+          "joins_checked": 8,
+          "max_gap_mm": 7.105427357601002e-15,
+          "max_tangent_angle_degrees": 1.2074182697257333e-06,
+          "passed": true
+        }
+      },
+      "derived_parameters": {}
     },
     {
       "parameter": "Y4",
       "delta": 0.05,
       "update_errors": 0,
-      "baseline": 5355.955768445561,
-      "changed": 5357.64760861868,
+      "baseline": 6353.437197218285,
+      "changed": 6355.351694756315,
       "vertex_bound_change_mm": 0.0,
-      "restored": true
+      "restored": true,
+      "geometry_checks": {
+        "kernel": {
+          "body_consistency": "passed",
+          "face_face_intersection": "passed",
+          "face_self_intersection": "passed",
+          "faces_checked": 1
+        },
+        "transitions": {
+          "joins_checked": 8,
+          "max_gap_mm": 7.105427357601002e-15,
+          "max_tangent_angle_degrees": 0.0,
+          "passed": true
+        }
+      },
+      "derived_parameters": {}
     }
   ],
-  "job_directory": "D:\\Codex\\Workplace\\MCP\\DiskAgent\\nx_case_agent\\jobs\\3bce719231d44eed91b777f017262962"
+  "job_directory": "D:\\Codex\\Workplace\\MCP\\DiskAgent\\nx_case_agent\\jobs\\46e23036602547af9376b04f9c6009e5",
+  "acceptance_case": "original_2d"
 }

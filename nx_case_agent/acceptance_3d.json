@@ -1,7 +1,7 @@
 {
   "ok": true,
   "model_id": "new160",
-  "output": "D:\\Codex\\Workplace\\MCP\\DiskAgent\\nx_case_agent\\jobs\\f444bce021264d81b0c45a48d7760c9f\\model.prt",
+  "output": "D:\\Codex\\Workplace\\MCP\\DiskAgent\\nx_case_agent\\jobs\\35c0d8d44c094b32b6604a3e87dfc182\\model.prt",
   "parameterized": true,
   "reopened": true,
   "parameters": {
@@ -17,28 +17,25 @@
     "tip_chord": 14.0,
     "blade_thickness": 2.5,
     "tip_thickness": 1.5,
-    "blade_twist": 10.0
+    "blade_twist": 10.0,
+    "root_fillet": 0.3
   },
   "inferred_parameters": {
-    "bore_radius": 5.2,
-    "hub_length": 56.9,
     "hub_radius": 25.0,
-    "rim_radius": 71.7,
-    "rim_width": 20.8,
     "web_thickness": 9.0,
-    "sector_angle": 7.66,
     "root_chord": 20.0,
     "tip_chord": 14.0,
     "blade_thickness": 2.5,
     "tip_thickness": 1.5,
-    "blade_twist": 10.0
+    "blade_twist": 10.0,
+    "root_fillet": 0.3
   },
   "geometry": {
     "solid": true,
-    "faces": 19,
-    "edges": 48,
-    "area_mm2": 6555.872509938504,
-    "volume_mm3": 8449.014595011968,
+    "faces": 24,
+    "edges": 66,
+    "area_mm2": 6485.3869049063105,
+    "volume_mm3": 8535.118250666117,
     "vertex_bounds": [
       -28.45,
       -4.789297500458828,
@@ -49,127 +46,585 @@
     ]
   },
   "notes": [
-    "盘体采用简化回转轮廓；叶片采用三截面菱形截面放样，不代表经过气动设计的翼型。",
-    "本版叶根通过实体重叠求和连接，未建立叶根圆角特征。"
+    "盘体采用带G1平滑过渡的简化回转轮廓；叶片采用三截面菱形截面放样，不代表经过气动设计的翼型。",
+    "叶根圆角采用NX原生边倒圆，由root_fillet驱动，缺省0.3毫米；未指定尺寸均为设计假设，不是参考模型实测值。"
   ],
+  "recipe_version": "2.1",
+  "derived_parameters": {
+    "blade_height": {
+      "expression": "tip_radius-rim_radius",
+      "value": 33.3,
+      "unit": "mm"
+    }
+  },
+  "parameter_table": [
+    {
+      "name": "bore_radius",
+      "label": "内孔半径",
+      "value": 5.2,
+      "unit": "mm",
+      "source": "description_or_override"
+    },
+    {
+      "name": "hub_length",
+      "label": "轮毂长度",
+      "value": 56.9,
+      "unit": "mm",
+      "source": "description_or_override"
+    },
+    {
+      "name": "hub_radius",
+      "label": "轮毂外半径",
+      "value": 25.0,
+      "unit": "mm",
+      "source": "design_assumption"
+    },
+    {
+      "name": "rim_radius",
+      "label": "盘体外缘半径",
+      "value": 71.7,
+      "unit": "mm",
+      "source": "description_or_override"
+    },
+    {
+      "name": "rim_width",
+      "label": "外缘宽度",
+      "value": 20.8,
+      "unit": "mm",
+      "source": "description_or_override"
+    },
+    {
+      "name": "web_thickness",
+      "label": "薄盘厚度",
+      "value": 9.0,
+      "unit": "mm",
+      "source": "design_assumption"
+    },
+    {
+      "name": "sector_angle",
+      "label": "扇区角",
+      "value": 7.66,
+      "unit": "deg",
+      "source": "description_or_override"
+    },
+    {
+      "name": "tip_radius",
+      "label": "叶尖半径",
+      "value": 105.0,
+      "unit": "mm",
+      "source": "description_or_override"
+    },
+    {
+      "name": "root_chord",
+      "label": "叶根弦长",
+      "value": 20.0,
+      "unit": "mm",
+      "source": "design_assumption"
+    },
+    {
+      "name": "tip_chord",
+      "label": "叶尖弦长",
+      "value": 14.0,
+      "unit": "mm",
+      "source": "design_assumption"
+    },
+    {
+      "name": "blade_thickness",
+      "label": "叶片厚度",
+      "value": 2.5,
+      "unit": "mm",
+      "source": "design_assumption"
+    },
+    {
+      "name": "tip_thickness",
+      "label": "叶尖厚度",
+      "value": 1.5,
+      "unit": "mm",
+      "source": "design_assumption"
+    },
+    {
+      "name": "blade_twist",
+      "label": "扭转角",
+      "value": 10.0,
+      "unit": "deg",
+      "source": "design_assumption"
+    },
+    {
+      "name": "root_fillet",
+      "label": "叶根圆角",
+      "value": 0.3,
+      "unit": "mm",
+      "source": "design_assumption"
+    },
+    {
+      "name": "blade_height",
+      "label": "叶片高度",
+      "value": 33.3,
+      "unit": "mm",
+      "source": "derived",
+      "expression": "tip_radius-rim_radius"
+    }
+  ],
+  "modeling_steps": [
+    {
+      "name": "LEARNED_DISK_SECTOR",
+      "type": "SWP104"
+    },
+    {
+      "name": "PARAMETRIC_TAPERED_TWISTED_BLADE",
+      "type": "THRU_CURVE"
+    },
+    {
+      "name": "BLADE_DISK_UNION",
+      "type": "UNITE"
+    },
+    {
+      "name": "PARAMETRIC_BLADE_ROOT_FILLET",
+      "type": "BLEND"
+    }
+  ],
+  "geometry_checks": {
+    "kernel": {
+      "body_consistency": "passed",
+      "face_face_intersection": "passed",
+      "face_self_intersection": "passed",
+      "faces_checked": 24
+    },
+    "transitions": {
+      "joins_checked": 8,
+      "max_gap_mm": 3.552713678800501e-15,
+      "max_tangent_angle_degrees": 0.0,
+      "passed": true
+    }
+  },
+  "reopened_geometry_checks": {
+    "body_consistency": "passed",
+    "face_face_intersection": "passed",
+    "face_self_intersection": "passed",
+    "faces_checked": 24
+  },
   "parameter_tests": [
     {
       "parameter": "bore_radius",
       "delta": 0.05,
       "update_errors": 0,
-      "baseline": 8449.014595011968,
-      "changed": 8447.027243439692,
+      "baseline": 8535.11825066611,
+      "changed": 8533.130899092992,
       "vertex_bound_change_mm": 0.049888331529203356,
-      "restored": true
+      "restored": true,
+      "geometry_checks": {
+        "kernel": {
+          "body_consistency": "passed",
+          "face_face_intersection": "passed",
+          "face_self_intersection": "passed",
+          "faces_checked": 24
+        },
+        "transitions": {
+          "joins_checked": 8,
+          "max_gap_mm": 3.552713678800501e-15,
+          "max_tangent_angle_degrees": 0.0,
+          "passed": true
+        }
+      },
+      "derived_parameters": {
+        "blade_height": {
+          "expression": "tip_radius-rim_radius",
+          "value": 33.3,
+          "unit": "mm"
+        }
+      }
     },
     {
       "parameter": "hub_length",
       "delta": 0.05,
       "update_errors": 0,
-      "baseline": 8449.014595011968,
-      "changed": 8453.571664255152,
-      "vertex_bound_change_mm": 0.02500000000000213,
-      "restored": true
+      "baseline": 8535.11825066611,
+      "changed": 8539.315598253257,
+      "vertex_bound_change_mm": 0.02499999999999858,
+      "restored": true,
+      "geometry_checks": {
+        "kernel": {
+          "body_consistency": "passed",
+          "face_face_intersection": "passed",
+          "face_self_intersection": "passed",
+          "faces_checked": 24
+        },
+        "transitions": {
+          "joins_checked": 8,
+          "max_gap_mm": 3.552713678800501e-15,
+          "max_tangent_angle_degrees": 0.0,
+          "passed": true
+        }
+      },
+      "derived_parameters": {
+        "blade_height": {
+          "expression": "tip_radius-rim_radius",
+          "value": 33.3,
+          "unit": "mm"
+        }
+      }
     },
     {
       "parameter": "hub_radius",
       "delta": 0.05,
       "update_errors": 0,
-      "baseline": 8449.014595011968,
-      "changed": 8457.515048604375,
+      "baseline": 8535.11825066611,
+      "changed": 8542.910073245997,
       "vertex_bound_change_mm": 0.0,
-      "restored": true
+      "restored": true,
+      "geometry_checks": {
+        "kernel": {
+          "body_consistency": "passed",
+          "face_face_intersection": "passed",
+          "face_self_intersection": "passed",
+          "faces_checked": 24
+        },
+        "transitions": {
+          "joins_checked": 8,
+          "max_gap_mm": 5.0242958677880805e-15,
+          "max_tangent_angle_degrees": 0.0,
+          "passed": true
+        }
+      },
+      "derived_parameters": {
+        "blade_height": {
+          "expression": "tip_radius-rim_radius",
+          "value": 33.3,
+          "unit": "mm"
+        }
+      }
     },
     {
       "parameter": "rim_radius",
       "delta": 0.05,
       "update_errors": 0,
-      "baseline": 8449.014595011968,
-      "changed": 8456.031027683068,
+      "baseline": 8535.11825066611,
+      "changed": 8542.799195151001,
       "vertex_bound_change_mm": 0.003339816945927332,
-      "restored": true
+      "restored": true,
+      "geometry_checks": {
+        "kernel": {
+          "body_consistency": "passed",
+          "face_face_intersection": "passed",
+          "face_self_intersection": "passed",
+          "faces_checked": 24
+        },
+        "transitions": {
+          "joins_checked": 8,
+          "max_gap_mm": 3.552713678800501e-15,
+          "max_tangent_angle_degrees": 0.0,
+          "passed": true
+        }
+      },
+      "derived_parameters": {
+        "blade_height": {
+          "expression": "tip_radius-rim_radius",
+          "value": 33.25,
+          "unit": "mm"
+        }
+      }
     },
     {
       "parameter": "rim_width",
       "delta": 0.05,
       "update_errors": 0,
-      "baseline": 8449.014595011968,
-      "changed": 8450.878264568564,
+      "baseline": 8535.11825066611,
+      "changed": 8538.80460073574,
       "vertex_bound_change_mm": 0.0,
-      "restored": true
+      "restored": true,
+      "geometry_checks": {
+        "kernel": {
+          "body_consistency": "passed",
+          "face_face_intersection": "passed",
+          "face_self_intersection": "passed",
+          "faces_checked": 24
+        },
+        "transitions": {
+          "joins_checked": 8,
+          "max_gap_mm": 3.552713678800501e-15,
+          "max_tangent_angle_degrees": 0.0,
+          "passed": true
+        }
+      },
+      "derived_parameters": {
+        "blade_height": {
+          "expression": "tip_radius-rim_radius",
+          "value": 33.3,
+          "unit": "mm"
+        }
+      }
     },
     {
       "parameter": "web_thickness",
       "delta": 0.05,
       "update_errors": 0,
-      "baseline": 8449.014595011968,
-      "changed": 8459.685905283206,
+      "baseline": 8535.11825066611,
+      "changed": 8544.32741682648,
       "vertex_bound_change_mm": 0.0,
-      "restored": true
+      "restored": true,
+      "geometry_checks": {
+        "kernel": {
+          "body_consistency": "passed",
+          "face_face_intersection": "passed",
+          "face_self_intersection": "passed",
+          "faces_checked": 24
+        },
+        "transitions": {
+          "joins_checked": 8,
+          "max_gap_mm": 3.552713678800501e-15,
+          "max_tangent_angle_degrees": 0.0,
+          "passed": true
+        }
+      },
+      "derived_parameters": {
+        "blade_height": {
+          "expression": "tip_radius-rim_radius",
+          "value": 33.3,
+          "unit": "mm"
+        }
+      }
     },
     {
       "parameter": "sector_angle",
       "delta": 0.05,
       "update_errors": 0,
-      "baseline": 8449.014595011968,
-      "changed": 8500.464119705903,
+      "baseline": 8535.11825066611,
+      "changed": 8587.124875602967,
       "vertex_bound_change_mm": 0.03121469892206541,
-      "restored": true
+      "restored": true,
+      "geometry_checks": {
+        "kernel": {
+          "body_consistency": "passed",
+          "face_face_intersection": "passed",
+          "face_self_intersection": "passed",
+          "faces_checked": 24
+        },
+        "transitions": {
+          "joins_checked": 8,
+          "max_gap_mm": 3.552713678800501e-15,
+          "max_tangent_angle_degrees": 0.0,
+          "passed": true
+        }
+      },
+      "derived_parameters": {
+        "blade_height": {
+          "expression": "tip_radius-rim_radius",
+          "value": 33.3,
+          "unit": "mm"
+        }
+      }
     },
     {
       "parameter": "tip_radius",
       "delta": 0.05,
       "update_errors": 0,
-      "baseline": 8449.014595011968,
-      "changed": 8449.876686677335,
+      "baseline": 8535.11825066611,
+      "changed": 8535.980376003332,
       "vertex_bound_change_mm": 0.05000000000001137,
-      "restored": true
+      "restored": true,
+      "geometry_checks": {
+        "kernel": {
+          "body_consistency": "passed",
+          "face_face_intersection": "passed",
+          "face_self_intersection": "passed",
+          "faces_checked": 24
+        },
+        "transitions": {
+          "joins_checked": 8,
+          "max_gap_mm": 3.552713678800501e-15,
+          "max_tangent_angle_degrees": 0.0,
+          "passed": true
+        }
+      },
+      "derived_parameters": {
+        "blade_height": {
+          "expression": "tip_radius-rim_radius",
+          "value": 33.349999999999994,
+          "unit": "mm"
+        }
+      }
     },
     {
       "parameter": "root_chord",
       "delta": 0.05,
       "update_errors": 0,
-      "baseline": 8449.014595011968,
-      "changed": 8449.882218867793,
+      "baseline": 8535.11825066611,
+      "changed": 8535.98677736691,
       "vertex_bound_change_mm": 0.0,
-      "restored": true
+      "restored": true,
+      "geometry_checks": {
+        "kernel": {
+          "body_consistency": "passed",
+          "face_face_intersection": "passed",
+          "face_self_intersection": "passed",
+          "faces_checked": 24
+        },
+        "transitions": {
+          "joins_checked": 8,
+          "max_gap_mm": 3.552713678800501e-15,
+          "max_tangent_angle_degrees": 0.0,
+          "passed": true
+        }
+      },
+      "derived_parameters": {
+        "blade_height": {
+          "expression": "tip_radius-rim_radius",
+          "value": 33.3,
+          "unit": "mm"
+        }
+      }
     },
     {
       "parameter": "tip_chord",
       "delta": 0.05,
       "update_errors": 0,
-      "baseline": 8449.014595011968,
-      "changed": 8449.799944997905,
+      "baseline": 8535.11825066611,
+      "changed": 8535.903718539392,
       "vertex_bound_change_mm": 0.0,
-      "restored": true
+      "restored": true,
+      "geometry_checks": {
+        "kernel": {
+          "body_consistency": "passed",
+          "face_face_intersection": "passed",
+          "face_self_intersection": "passed",
+          "faces_checked": 24
+        },
+        "transitions": {
+          "joins_checked": 8,
+          "max_gap_mm": 3.552713678800501e-15,
+          "max_tangent_angle_degrees": 0.0,
+          "passed": true
+        }
+      },
+      "derived_parameters": {
+        "blade_height": {
+          "expression": "tip_radius-rim_radius",
+          "value": 33.3,
+          "unit": "mm"
+        }
+      }
     },
     {
       "parameter": "blade_thickness",
       "delta": 0.05,
       "update_errors": 0,
-      "baseline": 8449.014595011968,
-      "changed": 8456.242890922967,
+      "baseline": 8535.11825066611,
+      "changed": 8542.345511923908,
       "vertex_bound_change_mm": 0.0,
-      "restored": true
+      "restored": true,
+      "geometry_checks": {
+        "kernel": {
+          "body_consistency": "passed",
+          "face_face_intersection": "passed",
+          "face_self_intersection": "passed",
+          "faces_checked": 24
+        },
+        "transitions": {
+          "joins_checked": 8,
+          "max_gap_mm": 3.552713678800501e-15,
+          "max_tangent_angle_degrees": 0.0,
+          "passed": true
+        }
+      },
+      "derived_parameters": {
+        "blade_height": {
+          "expression": "tip_radius-rim_radius",
+          "value": 33.3,
+          "unit": "mm"
+        }
+      }
     },
     {
       "parameter": "tip_thickness",
       "delta": 0.05,
       "update_errors": 0,
-      "baseline": 8449.014595011968,
-      "changed": 8455.868663176348,
+      "baseline": 8535.11825066611,
+      "changed": 8541.972922284283,
       "vertex_bound_change_mm": 0.0,
-      "restored": true
+      "restored": true,
+      "geometry_checks": {
+        "kernel": {
+          "body_consistency": "passed",
+          "face_face_intersection": "passed",
+          "face_self_intersection": "passed",
+          "faces_checked": 24
+        },
+        "transitions": {
+          "joins_checked": 8,
+          "max_gap_mm": 3.552713678800501e-15,
+          "max_tangent_angle_degrees": 0.0,
+          "passed": true
+        }
+      },
+      "derived_parameters": {
+        "blade_height": {
+          "expression": "tip_radius-rim_radius",
+          "value": 33.3,
+          "unit": "mm"
+        }
+      }
     },
     {
       "parameter": "blade_twist",
       "delta": 0.05,
       "update_errors": 0,
-      "baseline": 8449.014595011968,
-      "changed": 8449.014330742677,
+      "baseline": 8535.11825066611,
+      "changed": 8535.118000055894,
       "vertex_bound_change_mm": 0.0,
-      "restored": true
+      "restored": true,
+      "geometry_checks": {
+        "kernel": {
+          "body_consistency": "passed",
+          "face_face_intersection": "passed",
+          "face_self_intersection": "passed",
+          "faces_checked": 24
+        },
+        "transitions": {
+          "joins_checked": 8,
+          "max_gap_mm": 3.552713678800501e-15,
+          "max_tangent_angle_degrees": 0.0,
+          "passed": true
+        }
+      },
+      "derived_parameters": {
+        "blade_height": {
+          "expression": "tip_radius-rim_radius",
+          "value": 33.3,
+          "unit": "mm"
+        }
+      }
+    },
+    {
+      "parameter": "root_fillet",
+      "delta": 0.05,
+      "update_errors": 0,
+      "baseline": 8535.11825066611,
+      "changed": 8535.391914342132,
+      "vertex_bound_change_mm": 0.0,
+      "restored": true,
+      "geometry_checks": {
+        "kernel": {
+          "body_consistency": "passed",
+          "face_face_intersection": "passed",
+          "face_self_intersection": "passed",
+          "faces_checked": 24
+        },
+        "transitions": {
+          "joins_checked": 8,
+          "max_gap_mm": 3.552713678800501e-15,
+          "max_tangent_angle_degrees": 0.0,
+          "passed": true
+        }
+      },
+      "derived_parameters": {
+        "blade_height": {
+          "expression": "tip_radius-rim_radius",
+          "value": 33.3,
+          "unit": "mm"
+        }
+      }
     }
   ],
-  "job_directory": "D:\\Codex\\Workplace\\MCP\\DiskAgent\\nx_case_agent\\jobs\\f444bce021264d81b0c45a48d7760c9f"
+  "job_directory": "D:\\Codex\\Workplace\\MCP\\DiskAgent\\nx_case_agent\\jobs\\35c0d8d44c094b32b6604a3e87dfc182",
+  "acceptance_case": "original_3d"
 }

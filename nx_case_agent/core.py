@@ -38,14 +38,26 @@ def plan(description, parameters=None):
     # Explicit numbered X/Y settings must not be silently ignored.
     for token in re.findall(r'\b([XY]\d+)\s*[=＝:：]',description,re.I):
         if token.upper() not in values:raise ValueError('未知参数：'+token)
+    if key=='new160':
+        angle=re.findall(r'(?:约\s*)?'+number+r'\s*[°度]\s*的?\s*(?:局部)?扇区',description)
+        if angle:
+            if len(set(map(float,angle)))>1 or ('sector_angle' in supplied and not math.isclose(supplied['sector_angle'],float(angle[-1]))):raise ValueError('同一参数给出了不同数值：sector_angle')
+            supplied['sector_angle']=float(angle[-1])
     if parameters is not None:
-        if not isinstance(parameters,dict) or set(parameters)-set(values):raise ValueError('参数对象含有未知尺寸。')
+        allowed=set(values)|set(recipe.get('derived_parameters',{}))
+        if not isinstance(parameters,dict) or set(parameters)-allowed:raise ValueError('参数对象含有未知尺寸。')
         supplied.update(parameters)
+        # A UI/optimizer edit to the independent tip radius replaces a textual height.
+        if 'tip_radius' in parameters and 'blade_height' not in parameters:supplied.pop('blade_height',None)
     for name,value in supplied.items():
         if isinstance(value,bool) or not isinstance(value,(int,float)) or not math.isfinite(value):raise ValueError('参数必须是有限数值：'+name)
-        low,high=recipe['bounds'][name]
+        low,high=([1,600] if name=='blade_height' else recipe['bounds'][name])
         if not low<=value<=high:raise ValueError(f'{name}须在{low}至{high}之间。')
-    values.update(supplied)
+    if key=='new160' and 'blade_height' in supplied:
+        tip=supplied.get('rim_radius',values['rim_radius'])+supplied['blade_height']
+        if 'tip_radius' in supplied and not math.isclose(supplied['tip_radius'],tip,abs_tol=1e-6):raise ValueError('叶片高度与叶尖半径、盘体外缘半径冲突。')
+        supplied['tip_radius']=tip
+    values.update({n:v for n,v in supplied.items() if n in values})
     if key=='geom2d':
         if not values['Y1']>values['Y2'] or not values['Y4']>values['Y3']:raise ValueError('内外端半厚度须大于相邻薄盘半厚度。')
     else:
@@ -54,11 +66,15 @@ def plan(description, parameters=None):
         if not p['web_thickness']<p['rim_width']<p['hub_length']:raise ValueError('应满足薄盘厚度 < 外缘宽度 < 轮毂长度。')
         if p['root_chord']>p['rim_width']:raise ValueError('当前叶根弦长不能大于外缘轴向宽度。')
         if p['blade_thickness']>2*(p['rim_radius']-1)*math.sin(math.radians(p['sector_angle']/2))*.9:raise ValueError('叶根厚度超出扇区宽度。')
+        if p['root_fillet']>p['blade_thickness']*.4:raise ValueError('叶根圆角半径不得超过叶根厚度的40%。')
+        if not recipe['bounds']['tip_radius'][0]<=p['tip_radius']<=recipe['bounds']['tip_radius'][1]:raise ValueError('由叶片高度计算的叶尖半径超出范围。')
     warnings=list(recipe['simplifications'])
-    if '圆角' in t and key=='new160':warnings.append('输入包含圆角要求：本版会生成连通叶根，但省略圆角，结果会明确报告此差异。')
+    derived=({'blade_height':{'expression':'tip_radius-rim_radius','value':values['tip_radius']-values['rim_radius'],'unit':'mm'}} if key=='new160' else {})
+    table=[{'name':n,'label':recipe['aliases'][n][0],'value':v,'unit':'deg' if n in ['sector_angle','blade_twist'] else 'mm','source':'description_or_override' if n in supplied else 'design_assumption'} for n,v in values.items()]
+    table.extend({'name':n,'label':recipe['aliases'][n][0],'value':d['value'],'unit':d['unit'],'source':'derived','expression':d['expression']} for n,d in derived.items())
     return {'ok':True,'kind':'learned_case','model_id':key,'description':description,'parameters':values,
             'supplied_parameters':sorted(supplied),'inferred_parameters':{n:v for n,v in values.items() if n not in supplied},
-            'parameterized':True,'recipe_version':'2.0','learned':recipe['learned'],'notes':warnings,
+            'parameterized':True,'recipe_version':'2.1','derived_parameters':derived,'parameter_table':table,'parameter_bounds':recipe['bounds'],'learned':recipe['learned'],'notes':warnings,
             'summary_zh':'已匹配'+recipe['title']+'，缺少尺寸已由案例配方补全。'}
 
 def execute(description, parameters=None, nx_home=None, jobs_root=None):
