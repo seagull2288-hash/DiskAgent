@@ -1,13 +1,54 @@
 {
-  "version": "2.1",
+  "version": "3.0",
   "target": "Siemens NX 12.0",
-  "learning_method": "persisted_design_priors_and_native_feature_recipes",
+  "learning_method": "persisted_complete_geometry_and_verified_parameter_bindings",
   "llm_weights_trained": false,
+  "geometry_mode": "precise",
+  "simplified_fallback_allowed": false,
   "cases": [
-    {"id": "geom2d", "source": "Geom2d.stp", "source_sha256": "7bfa2208c10e01871db87186c31943f4b3ddcaa32d1b1be839a0ae1340254633", "learned": "five radial spans, four half-heights, symmetric thin-web thick-end section", "native_recipe": "associative points, lines, G1 cubic Bezier transitions, bounded plane"},
-    {"id": "new160", "source": "new160.x_t", "source_sha256": "9004b52a1b0000718b6f75faee446ef2f0a64253e452f439f88b3403e82bfd1b", "learned": "hub-web-rim-single-blade structure and principal scales", "native_recipe": "G1 associative profile, sector revolution, derived blade height, three-section blade loft, boolean union, parametric root edge blend", "design_assumptions": "simplified hub profile and diamond blade sections; default root fillet 0.3 mm"}
+    {
+      "id": "geom2d",
+      "source": "Geom2d.stp",
+      "source_sha256": "7bfa2208c10e01871db87186c31943f4b3ddcaa32d1b1be839a0ae1340254633",
+      "asset": "assets/geom2d_boundary.json",
+      "asset_sha256": "9e8269e2e69c044e3ebb0acfca287ff63a0709907cdbcfa1a6ad17b522ce9f72",
+      "native_recipe": "complete B-spline knots and poles, expression-driven associative points and curves, bounded plane",
+      "independent_parameters": "X1..X5,Y1..Y4,inner_radius",
+      "expected_topology": {
+        "solid": false,
+        "faces": 1,
+        "edges": 14
+      }
+    },
+    {
+      "id": "new160",
+      "source": "new160.x_t",
+      "asset": "assets/new160.x_t",
+      "asset_sha256": "9004b52a1b0000718b6f75faee446ef2f0a64253e452f439f88b3403e82bfd1b",
+      "native_recipe": "original precise B-rep instance plus NX axial/radial scale",
+      "independent_parameters": [
+        "hub_length",
+        "rim_radius"
+      ],
+      "parameterization_scope": "coupled_global_axial_and_radial_dimensions_only",
+      "full_feature_history_recovered": false,
+      "independent_blade_and_root_optimization_supported": false,
+      "expected_topology": {
+        "solid": true,
+        "faces": 44,
+        "edges": 122
+      }
+    }
   ],
-  "source_files_required_at_runtime": false,
-  "default_parameters_and_constraints": "recipes.py",
-  "verification": "acceptance_mcp.json"
+  "bundled_geometry_assets_required_at_runtime": true,
+  "external_desktop_paths_required": false,
+  "default_parameters_and_constraints": "precision_recipes.py",
+  "verification": {
+    "records": "acceptance_mcp.json",
+    "sampling_method": "bidirectional edges and trimmed-face interiors plus topology and mass metrics",
+    "distance_tolerance_mm": 0.001,
+    "area_difference_tolerance_mm2": 0.001,
+    "volume_difference_tolerance_mm3": 0.001,
+    "continuous_hausdorff_bound_proven": false
+  }
 }

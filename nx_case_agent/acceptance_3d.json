@@ -1,296 +1,268 @@
 {
-  "ok": true,
   "model_id": "new160",
-  "output": "D:\\Codex\\Workplace\\MCP\\DiskAgent\\nx_case_agent\\jobs\\35c0d8d44c094b32b6604a3e87dfc182\\model.prt",
-  "parameterized": true,
-  "reopened": true,
   "parameters": {
-    "bore_radius": 5.2,
     "hub_length": 56.9,
-    "hub_radius": 25.0,
-    "rim_radius": 71.7,
-    "rim_width": 20.8,
-    "web_thickness": 9.0,
-    "sector_angle": 7.66,
-    "tip_radius": 105.0,
-    "root_chord": 20.0,
-    "tip_chord": 14.0,
-    "blade_thickness": 2.5,
-    "tip_thickness": 1.5,
-    "blade_twist": 10.0,
-    "root_fillet": 0.3
+    "rim_radius": 71.68
   },
-  "inferred_parameters": {
-    "hub_radius": 25.0,
-    "web_thickness": 9.0,
-    "root_chord": 20.0,
-    "tip_chord": 14.0,
-    "blade_thickness": 2.5,
-    "tip_thickness": 1.5,
-    "blade_twist": 10.0,
-    "root_fillet": 0.3
-  },
-  "geometry": {
-    "solid": true,
-    "faces": 24,
-    "edges": 66,
-    "area_mm2": 6485.3869049063105,
-    "volume_mm3": 8535.118250666117,
-    "vertex_bounds": [
-      -28.45,
-      -4.789297500458828,
-      5.188386479037145,
-      28.45,
-      4.789297500458828,
-      105.0
-    ]
-  },
-  "notes": [
-    "盘体采用带G1平滑过渡的简化回转轮廓；叶片采用三截面菱形截面放样，不代表经过气动设计的翼型。",
-    "叶根圆角采用NX原生边倒圆，由root_fillet驱动，缺省0.3毫米；未指定尺寸均为设计假设，不是参考模型实测值。"
+  "inferred_parameters": {},
+  "supplied_parameters": [
+    "bore_radius",
+    "hub_length",
+    "rim_radius",
+    "rim_width",
+    "sector_angle",
+    "tip_radius"
   ],
-  "recipe_version": "2.1",
-  "derived_parameters": {
-    "blade_height": {
-      "expression": "tip_radius-rim_radius",
-      "value": 33.3,
-      "unit": "mm"
-    }
-  },
-  "parameter_table": [
+  "notes": [
+    "三维采用内置原始B-rep实例化，保留精确几何；未恢复原作者的草图/回转/放样特征历史。",
+    "目前真实可编辑参数为轮毂总长与盘体外缘半径，分别驱动轴向和径向整体缩放；孔径、盘缘宽度和叶高等关联变化。",
+    "叶片弦长、扭转、独立薄盘厚度和独立叶根圆角尚不能单独驱动；不会用简化几何替代。"
+  ],
+  "recipe_version": "3.0",
+  "geometry_mode": "precise",
+  "parameterization_scope": "axial_and_radial_scale_only",
+  "full_feature_history_recovered": false,
+  "nominal_resolutions": [
     {
-      "name": "bore_radius",
-      "label": "内孔半径",
-      "value": 5.2,
-      "unit": "mm",
-      "source": "description_or_override"
-    },
+      "parameter": "rim_radius",
+      "requested_nominal": 71.7,
+      "reference_exact": 71.68,
+      "reason": "reference_rounded_dimension"
+    }
+  ],
+  "reference_baseline": true,
+  "parameter_table": [
     {
       "name": "hub_length",
       "label": "轮毂长度",
       "value": 56.9,
       "unit": "mm",
-      "source": "description_or_override"
-    },
-    {
-      "name": "hub_radius",
-      "label": "轮毂外半径",
-      "value": 25.0,
-      "unit": "mm",
-      "source": "design_assumption"
+      "source": "description_or_override",
+      "editable": true
     },
     {
       "name": "rim_radius",
       "label": "盘体外缘半径",
-      "value": 71.7,
+      "value": 71.68,
       "unit": "mm",
-      "source": "description_or_override"
+      "source": "description_or_override",
+      "editable": true
     },
     {
-      "name": "rim_width",
-      "label": "外缘宽度",
-      "value": 20.8,
+      "name": "bore_radius",
+      "label": "内孔半径",
+      "value": 5.2,
       "unit": "mm",
-      "source": "description_or_override"
-    },
-    {
-      "name": "web_thickness",
-      "label": "薄盘厚度",
-      "value": 9.0,
-      "unit": "mm",
-      "source": "design_assumption"
-    },
-    {
-      "name": "sector_angle",
-      "label": "扇区角",
-      "value": 7.66,
-      "unit": "deg",
-      "source": "description_or_override"
+      "source": "derived",
+      "expression": "5.2*radial_scale",
+      "editable": false
     },
     {
       "name": "tip_radius",
       "label": "叶尖半径",
       "value": 105.0,
       "unit": "mm",
-      "source": "description_or_override"
+      "source": "derived",
+      "expression": "105*radial_scale",
+      "editable": false
     },
     {
-      "name": "root_chord",
-      "label": "叶根弦长",
-      "value": 20.0,
+      "name": "hub_radius",
+      "label": "轮毂大台阶半径",
+      "value": 27.5,
       "unit": "mm",
-      "source": "design_assumption"
+      "source": "derived",
+      "expression": "27.5*radial_scale",
+      "editable": false
     },
     {
-      "name": "tip_chord",
-      "label": "叶尖弦长",
-      "value": 14.0,
+      "name": "rim_width",
+      "label": "外缘轴向宽度",
+      "value": 20.8,
       "unit": "mm",
-      "source": "design_assumption"
+      "source": "derived",
+      "expression": "20.8*axial_scale",
+      "editable": false
     },
     {
-      "name": "blade_thickness",
-      "label": "叶片厚度",
-      "value": 2.5,
+      "name": "web_thickness",
+      "label": "薄盘局部厚度",
+      "value": 9.0,
       "unit": "mm",
-      "source": "design_assumption"
-    },
-    {
-      "name": "tip_thickness",
-      "label": "叶尖厚度",
-      "value": 1.5,
-      "unit": "mm",
-      "source": "design_assumption"
-    },
-    {
-      "name": "blade_twist",
-      "label": "扭转角",
-      "value": 10.0,
-      "unit": "deg",
-      "source": "design_assumption"
-    },
-    {
-      "name": "root_fillet",
-      "label": "叶根圆角",
-      "value": 0.3,
-      "unit": "mm",
-      "source": "design_assumption"
+      "source": "derived",
+      "expression": "9*axial_scale",
+      "editable": false
     },
     {
       "name": "blade_height",
       "label": "叶片高度",
-      "value": 33.3,
+      "value": 33.32,
       "unit": "mm",
       "source": "derived",
-      "expression": "tip_radius-rim_radius"
+      "expression": "tip_radius-rim_radius",
+      "editable": false
     }
   ],
-  "modeling_steps": [
-    {
-      "name": "LEARNED_DISK_SECTOR",
-      "type": "SWP104"
-    },
-    {
-      "name": "PARAMETRIC_TAPERED_TWISTED_BLADE",
-      "type": "THRU_CURVE"
-    },
-    {
-      "name": "BLADE_DISK_UNION",
-      "type": "UNITE"
-    },
-    {
-      "name": "PARAMETRIC_BLADE_ROOT_FILLET",
-      "type": "BLEND"
-    }
-  ],
+  "ok": true,
+  "output": "D:\\Codex\\Workplace\\MCP\\DiskAgent\\nx_case_agent\\jobs\\e9a9b65df3364ae7868ec3dd3700d9ca\\model.prt",
+  "parameterized": true,
+  "reopened": true,
+  "geometry": {
+    "solid": true,
+    "faces": 44,
+    "edges": 122,
+    "area_mm2": 5532.232528635653,
+    "volume_mm3": 7115.377591359093,
+    "vertex_bounds": [
+      -31.9,
+      -9.00350138955938,
+      5.177831709234971,
+      25.0,
+      5.1297384219302,
+      104.9747000480854
+    ]
+  },
   "geometry_checks": {
     "kernel": {
       "body_consistency": "passed",
       "face_face_intersection": "passed",
       "face_self_intersection": "passed",
-      "faces_checked": 24
-    },
-    "transitions": {
-      "joins_checked": 8,
-      "max_gap_mm": 3.552713678800501e-15,
-      "max_tangent_angle_degrees": 0.0,
-      "passed": true
+      "faces_checked": 44
     }
   },
   "reopened_geometry_checks": {
     "body_consistency": "passed",
     "face_face_intersection": "passed",
     "face_self_intersection": "passed",
-    "faces_checked": 24
+    "faces_checked": 44
+  },
+  "reference_comparison": {
+    "passed": true,
+    "distance_tolerance_mm": 0.001,
+    "metric_tolerance": 0.001,
+    "same_topology": true,
+    "candidate_to_reference": {
+      "samples": 2090,
+      "faces_sampled": 44,
+      "max_distance_mm": 0.0008999114701276781,
+      "max_solver_accuracy_mm": 0.0
+    },
+    "reference_to_candidate": {
+      "samples": 2090,
+      "faces_sampled": 44,
+      "max_distance_mm": 0.0008999114701276781,
+      "max_solver_accuracy_mm": 0.0
+    },
+    "area_difference_mm2": 0.0,
+    "volume_difference_mm3": 0.0,
+    "reference_geometry": {
+      "solid": true,
+      "faces": 44,
+      "edges": 122,
+      "area_mm2": 5532.232528635653,
+      "volume_mm3": 7115.377591359093,
+      "vertex_bounds": [
+        -31.9,
+        -9.00350138955938,
+        5.177831709234971,
+        25.0,
+        5.1297384219302,
+        104.9747000480854
+      ]
+    },
+    "method": "bidirectional_edge_and_trimmed_face_interior_sampling_plus_metrics",
+    "continuous_hausdorff_bound_proven": false
+  },
+  "derived_parameters": {
+    "bore_radius": {
+      "expression": "reference_bore_radius*radial_scale",
+      "value": 5.2,
+      "unit": "mm",
+      "label": "内孔半径"
+    },
+    "tip_radius": {
+      "expression": "reference_tip_radius*radial_scale",
+      "value": 105.0,
+      "unit": "mm",
+      "label": "叶尖半径"
+    },
+    "hub_radius": {
+      "expression": "reference_hub_radius*radial_scale",
+      "value": 27.5,
+      "unit": "mm",
+      "label": "轮毂大台阶半径"
+    },
+    "rim_width": {
+      "expression": "reference_rim_width*axial_scale",
+      "value": 20.8,
+      "unit": "mm",
+      "label": "外缘轴向宽度"
+    },
+    "web_thickness": {
+      "expression": "reference_web_thickness*axial_scale",
+      "value": 9.0,
+      "unit": "mm",
+      "label": "薄盘局部厚度"
+    },
+    "blade_height": {
+      "expression": "tip_radius-rim_radius",
+      "value": 33.31999999999999,
+      "unit": "mm",
+      "label": "叶片高度"
+    }
   },
   "parameter_tests": [
-    {
-      "parameter": "bore_radius",
-      "delta": 0.05,
-      "update_errors": 0,
-      "baseline": 8535.11825066611,
-      "changed": 8533.130899092992,
-      "vertex_bound_change_mm": 0.049888331529203356,
-      "restored": true,
-      "geometry_checks": {
-        "kernel": {
-          "body_consistency": "passed",
-          "face_face_intersection": "passed",
-          "face_self_intersection": "passed",
-          "faces_checked": 24
-        },
-        "transitions": {
-          "joins_checked": 8,
-          "max_gap_mm": 3.552713678800501e-15,
-          "max_tangent_angle_degrees": 0.0,
-          "passed": true
-        }
-      },
-      "derived_parameters": {
-        "blade_height": {
-          "expression": "tip_radius-rim_radius",
-          "value": 33.3,
-          "unit": "mm"
-        }
-      }
-    },
     {
       "parameter": "hub_length",
       "delta": 0.05,
       "update_errors": 0,
-      "baseline": 8535.11825066611,
-      "changed": 8539.315598253257,
-      "vertex_bound_change_mm": 0.02499999999999858,
+      "baseline": 7115.377591359093,
+      "changed": 7121.628243041152,
       "restored": true,
       "geometry_checks": {
         "kernel": {
           "body_consistency": "passed",
           "face_face_intersection": "passed",
           "face_self_intersection": "passed",
-          "faces_checked": 24
-        },
-        "transitions": {
-          "joins_checked": 8,
-          "max_gap_mm": 3.552713678800501e-15,
-          "max_tangent_angle_degrees": 0.0,
-          "passed": true
+          "faces_checked": 44
         }
       },
       "derived_parameters": {
-        "blade_height": {
-          "expression": "tip_radius-rim_radius",
-          "value": 33.3,
-          "unit": "mm"
-        }
-      }
-    },
-    {
-      "parameter": "hub_radius",
-      "delta": 0.05,
-      "update_errors": 0,
-      "baseline": 8535.11825066611,
-      "changed": 8542.910073245997,
-      "vertex_bound_change_mm": 0.0,
-      "restored": true,
-      "geometry_checks": {
-        "kernel": {
-          "body_consistency": "passed",
-          "face_face_intersection": "passed",
-          "face_self_intersection": "passed",
-          "faces_checked": 24
+        "bore_radius": {
+          "expression": "reference_bore_radius*radial_scale",
+          "value": 5.2,
+          "unit": "mm",
+          "label": "内孔半径"
         },
-        "transitions": {
-          "joins_checked": 8,
-          "max_gap_mm": 5.0242958677880805e-15,
-          "max_tangent_angle_degrees": 0.0,
-          "passed": true
-        }
-      },
-      "derived_parameters": {
+        "tip_radius": {
+          "expression": "reference_tip_radius*radial_scale",
+          "value": 105.0,
+          "unit": "mm",
+          "label": "叶尖半径"
+        },
+        "hub_radius": {
+          "expression": "reference_hub_radius*radial_scale",
+          "value": 27.5,
+          "unit": "mm",
+          "label": "轮毂大台阶半径"
+        },
+        "rim_width": {
+          "expression": "reference_rim_width*axial_scale",
+          "value": 20.8182776801406,
+          "unit": "mm",
+          "label": "外缘轴向宽度"
+        },
+        "web_thickness": {
+          "expression": "reference_web_thickness*axial_scale",
+          "value": 9.007908611599298,
+          "unit": "mm",
+          "label": "薄盘局部厚度"
+        },
         "blade_height": {
           "expression": "tip_radius-rim_radius",
-          "value": 33.3,
-          "unit": "mm"
+          "value": 33.31999999999999,
+          "unit": "mm",
+          "label": "叶片高度"
         }
       }
     },
@@ -298,333 +270,73 @@
       "parameter": "rim_radius",
       "delta": 0.05,
       "update_errors": 0,
-      "baseline": 8535.11825066611,
-      "changed": 8542.799195151001,
-      "vertex_bound_change_mm": 0.003339816945927332,
+      "baseline": 7115.377591359093,
+      "changed": 7125.305799788149,
       "restored": true,
       "geometry_checks": {
         "kernel": {
           "body_consistency": "passed",
           "face_face_intersection": "passed",
           "face_self_intersection": "passed",
-          "faces_checked": 24
-        },
-        "transitions": {
-          "joins_checked": 8,
-          "max_gap_mm": 3.552713678800501e-15,
-          "max_tangent_angle_degrees": 0.0,
-          "passed": true
+          "faces_checked": 44
         }
       },
       "derived_parameters": {
-        "blade_height": {
-          "expression": "tip_radius-rim_radius",
-          "value": 33.25,
-          "unit": "mm"
-        }
-      }
-    },
-    {
-      "parameter": "rim_width",
-      "delta": 0.05,
-      "update_errors": 0,
-      "baseline": 8535.11825066611,
-      "changed": 8538.80460073574,
-      "vertex_bound_change_mm": 0.0,
-      "restored": true,
-      "geometry_checks": {
-        "kernel": {
-          "body_consistency": "passed",
-          "face_face_intersection": "passed",
-          "face_self_intersection": "passed",
-          "faces_checked": 24
+        "bore_radius": {
+          "expression": "reference_bore_radius*radial_scale",
+          "value": 5.203627232142858,
+          "unit": "mm",
+          "label": "内孔半径"
         },
-        "transitions": {
-          "joins_checked": 8,
-          "max_gap_mm": 3.552713678800501e-15,
-          "max_tangent_angle_degrees": 0.0,
-          "passed": true
-        }
-      },
-      "derived_parameters": {
-        "blade_height": {
-          "expression": "tip_radius-rim_radius",
-          "value": 33.3,
-          "unit": "mm"
-        }
-      }
-    },
-    {
-      "parameter": "web_thickness",
-      "delta": 0.05,
-      "update_errors": 0,
-      "baseline": 8535.11825066611,
-      "changed": 8544.32741682648,
-      "vertex_bound_change_mm": 0.0,
-      "restored": true,
-      "geometry_checks": {
-        "kernel": {
-          "body_consistency": "passed",
-          "face_face_intersection": "passed",
-          "face_self_intersection": "passed",
-          "faces_checked": 24
+        "tip_radius": {
+          "expression": "reference_tip_radius*radial_scale",
+          "value": 105.0732421875,
+          "unit": "mm",
+          "label": "叶尖半径"
         },
-        "transitions": {
-          "joins_checked": 8,
-          "max_gap_mm": 3.552713678800501e-15,
-          "max_tangent_angle_degrees": 0.0,
-          "passed": true
-        }
-      },
-      "derived_parameters": {
-        "blade_height": {
-          "expression": "tip_radius-rim_radius",
-          "value": 33.3,
-          "unit": "mm"
-        }
-      }
-    },
-    {
-      "parameter": "sector_angle",
-      "delta": 0.05,
-      "update_errors": 0,
-      "baseline": 8535.11825066611,
-      "changed": 8587.124875602967,
-      "vertex_bound_change_mm": 0.03121469892206541,
-      "restored": true,
-      "geometry_checks": {
-        "kernel": {
-          "body_consistency": "passed",
-          "face_face_intersection": "passed",
-          "face_self_intersection": "passed",
-          "faces_checked": 24
+        "hub_radius": {
+          "expression": "reference_hub_radius*radial_scale",
+          "value": 27.519182477678573,
+          "unit": "mm",
+          "label": "轮毂大台阶半径"
         },
-        "transitions": {
-          "joins_checked": 8,
-          "max_gap_mm": 3.552713678800501e-15,
-          "max_tangent_angle_degrees": 0.0,
-          "passed": true
-        }
-      },
-      "derived_parameters": {
-        "blade_height": {
-          "expression": "tip_radius-rim_radius",
-          "value": 33.3,
-          "unit": "mm"
-        }
-      }
-    },
-    {
-      "parameter": "tip_radius",
-      "delta": 0.05,
-      "update_errors": 0,
-      "baseline": 8535.11825066611,
-      "changed": 8535.980376003332,
-      "vertex_bound_change_mm": 0.05000000000001137,
-      "restored": true,
-      "geometry_checks": {
-        "kernel": {
-          "body_consistency": "passed",
-          "face_face_intersection": "passed",
-          "face_self_intersection": "passed",
-          "faces_checked": 24
+        "rim_width": {
+          "expression": "reference_rim_width*axial_scale",
+          "value": 20.8,
+          "unit": "mm",
+          "label": "外缘轴向宽度"
         },
-        "transitions": {
-          "joins_checked": 8,
-          "max_gap_mm": 3.552713678800501e-15,
-          "max_tangent_angle_degrees": 0.0,
-          "passed": true
-        }
-      },
-      "derived_parameters": {
-        "blade_height": {
-          "expression": "tip_radius-rim_radius",
-          "value": 33.349999999999994,
-          "unit": "mm"
-        }
-      }
-    },
-    {
-      "parameter": "root_chord",
-      "delta": 0.05,
-      "update_errors": 0,
-      "baseline": 8535.11825066611,
-      "changed": 8535.98677736691,
-      "vertex_bound_change_mm": 0.0,
-      "restored": true,
-      "geometry_checks": {
-        "kernel": {
-          "body_consistency": "passed",
-          "face_face_intersection": "passed",
-          "face_self_intersection": "passed",
-          "faces_checked": 24
+        "web_thickness": {
+          "expression": "reference_web_thickness*axial_scale",
+          "value": 9.0,
+          "unit": "mm",
+          "label": "薄盘局部厚度"
         },
-        "transitions": {
-          "joins_checked": 8,
-          "max_gap_mm": 3.552713678800501e-15,
-          "max_tangent_angle_degrees": 0.0,
-          "passed": true
-        }
-      },
-      "derived_parameters": {
         "blade_height": {
           "expression": "tip_radius-rim_radius",
-          "value": 33.3,
-          "unit": "mm"
-        }
-      }
-    },
-    {
-      "parameter": "tip_chord",
-      "delta": 0.05,
-      "update_errors": 0,
-      "baseline": 8535.11825066611,
-      "changed": 8535.903718539392,
-      "vertex_bound_change_mm": 0.0,
-      "restored": true,
-      "geometry_checks": {
-        "kernel": {
-          "body_consistency": "passed",
-          "face_face_intersection": "passed",
-          "face_self_intersection": "passed",
-          "faces_checked": 24
-        },
-        "transitions": {
-          "joins_checked": 8,
-          "max_gap_mm": 3.552713678800501e-15,
-          "max_tangent_angle_degrees": 0.0,
-          "passed": true
-        }
-      },
-      "derived_parameters": {
-        "blade_height": {
-          "expression": "tip_radius-rim_radius",
-          "value": 33.3,
-          "unit": "mm"
-        }
-      }
-    },
-    {
-      "parameter": "blade_thickness",
-      "delta": 0.05,
-      "update_errors": 0,
-      "baseline": 8535.11825066611,
-      "changed": 8542.345511923908,
-      "vertex_bound_change_mm": 0.0,
-      "restored": true,
-      "geometry_checks": {
-        "kernel": {
-          "body_consistency": "passed",
-          "face_face_intersection": "passed",
-          "face_self_intersection": "passed",
-          "faces_checked": 24
-        },
-        "transitions": {
-          "joins_checked": 8,
-          "max_gap_mm": 3.552713678800501e-15,
-          "max_tangent_angle_degrees": 0.0,
-          "passed": true
-        }
-      },
-      "derived_parameters": {
-        "blade_height": {
-          "expression": "tip_radius-rim_radius",
-          "value": 33.3,
-          "unit": "mm"
-        }
-      }
-    },
-    {
-      "parameter": "tip_thickness",
-      "delta": 0.05,
-      "update_errors": 0,
-      "baseline": 8535.11825066611,
-      "changed": 8541.972922284283,
-      "vertex_bound_change_mm": 0.0,
-      "restored": true,
-      "geometry_checks": {
-        "kernel": {
-          "body_consistency": "passed",
-          "face_face_intersection": "passed",
-          "face_self_intersection": "passed",
-          "faces_checked": 24
-        },
-        "transitions": {
-          "joins_checked": 8,
-          "max_gap_mm": 3.552713678800501e-15,
-          "max_tangent_angle_degrees": 0.0,
-          "passed": true
-        }
-      },
-      "derived_parameters": {
-        "blade_height": {
-          "expression": "tip_radius-rim_radius",
-          "value": 33.3,
-          "unit": "mm"
-        }
-      }
-    },
-    {
-      "parameter": "blade_twist",
-      "delta": 0.05,
-      "update_errors": 0,
-      "baseline": 8535.11825066611,
-      "changed": 8535.118000055894,
-      "vertex_bound_change_mm": 0.0,
-      "restored": true,
-      "geometry_checks": {
-        "kernel": {
-          "body_consistency": "passed",
-          "face_face_intersection": "passed",
-          "face_self_intersection": "passed",
-          "faces_checked": 24
-        },
-        "transitions": {
-          "joins_checked": 8,
-          "max_gap_mm": 3.552713678800501e-15,
-          "max_tangent_angle_degrees": 0.0,
-          "passed": true
-        }
-      },
-      "derived_parameters": {
-        "blade_height": {
-          "expression": "tip_radius-rim_radius",
-          "value": 33.3,
-          "unit": "mm"
-        }
-      }
-    },
-    {
-      "parameter": "root_fillet",
-      "delta": 0.05,
-      "update_errors": 0,
-      "baseline": 8535.11825066611,
-      "changed": 8535.391914342132,
-      "vertex_bound_change_mm": 0.0,
-      "restored": true,
-      "geometry_checks": {
-        "kernel": {
-          "body_consistency": "passed",
-          "face_face_intersection": "passed",
-          "face_self_intersection": "passed",
-          "faces_checked": 24
-        },
-        "transitions": {
-          "joins_checked": 8,
-          "max_gap_mm": 3.552713678800501e-15,
-          "max_tangent_angle_degrees": 0.0,
-          "passed": true
-        }
-      },
-      "derived_parameters": {
-        "blade_height": {
-          "expression": "tip_radius-rim_radius",
-          "value": 33.3,
-          "unit": "mm"
+          "value": 33.343242187499996,
+          "unit": "mm",
+          "label": "叶片高度"
         }
       }
     }
   ],
-  "job_directory": "D:\\Codex\\Workplace\\MCP\\DiskAgent\\nx_case_agent\\jobs\\35c0d8d44c094b32b6604a3e87dfc182",
-  "acceptance_case": "original_3d"
+  "modeling_steps": [
+    {
+      "name": "LEARNED_EXACT_SOURCE_BREP",
+      "type": "BREP"
+    },
+    {
+      "name": "EXACT_AXIAL_RADIAL_SCALE",
+      "type": "SCALE"
+    }
+  ],
+  "method": "learned_original_brep_with_native_axial_radial_scale",
+  "exact_original_baseline": true,
+  "simplified": false,
+  "source_asset_sha256": "9004b52a1b0000718b6f75faee446ef2f0a64253e452f439f88b3403e82bfd1b",
+  "job_directory": "D:\\Codex\\Workplace\\MCP\\DiskAgent\\nx_case_agent\\jobs\\e9a9b65df3364ae7868ec3dd3700d9ca",
+  "acceptance_case": "bold_3d",
+  "round": 1,
+  "seconds": 190.4
 }

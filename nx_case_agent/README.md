@@ -1,74 +1,89 @@
-# NX12 两案例建模智能体 v2.1
+# NX12 精确两案例建模智能体 v3.0
 
-输入不完整的自然语言需求，即可识别九参数二维轮盘或带单叶片的三维轮盘局部模型，从案例配方补全尺寸，创建原生参数化NX零件。当前范围为这两类结构。
+本版修正了简化轮毂和菱形叶片与参考件差距过大的问题。默认生成完整参考几何，包含原始台阶、真实叶片、叶根过渡和裁剪边界。生成失败或精度校验失败时返回错误，不退回简化轮廓。
 
-“训练完成”在本交付中指案例知识、默认参数、几何关系和生成程序已经固化并经过真实NX验证；没有训练GPT模型权重。此模块无需GPT API密钥，使用有限范围的词语和尺寸解析。接入LLM后可通过MCP使用相同工具。
+三维几何精确保留与完整特征级参数化是两项不同能力。目前三维以内置原始Parasolid B-rep实例化，再添加NX原生轴向/径向缩放特征；尚未恢复原作者的草图、回转、放样和圆角特征树，也不支持分别修改叶型、扭转角或局部圆角。二维使用完整控制网和原始节点创建原生关联样条，支持九参数修改。这些状态由API和界面明确报告。
 
-## 接收方独立使用
+## 独立使用与移交
 
-需要Windows、Python 3.10+、正常可用的NX12与许可。把完整的 `nx_case_agent` 文件夹放到任意目录，设置本机NX路径：
+需要Windows、Python 3.10+、NX12及其有效许可。复制完整的 `nx_case_agent` 文件夹（必须包含 `assets/`），配置本机NX路径和许可，然后运行：
 
 ```powershell
-$env:NX_AGENT_NXBIN='D:\UG12.0\UG\NXBIN' # 换成接收方真实路径
-# 同时配置本机NX许可所需的SPLM_LICENSE_SERVER
+$env:NX_AGENT_NXBIN='D:\UG12.0\UG\NXBIN'
+# 本机SPLM_LICENSE_SERVER按已有NX许可配置
 python -X utf8 nx_case_agent/agent.py web --port 8771
 ```
 
-打开 http://127.0.0.1:8771 ，输入需求，点击“理解描述并补全参数”，核对尺寸和简化说明，再点击建模。也可进入文件夹双击start.cmd。每次执行保存独立任务与PRT，路径在结果中返回。
+打开 http://127.0.0.1:8771 ，输入描述并核对参数，再执行建模。每次输出独立任务文件夹和NX12 PRT，执行结果列出路径。也可双击文件夹中的start.cmd。
 
-可以直接使用以下描述：
+不用提供以前的对话或再寻找桌面源文件；完整几何已随智能体的assets目录移交。服务执行前以及NX载入前均校验资产SHA256，资产缺失或损坏会阻止建模。这里的“学习”是固化案例几何、参数关系和程序，没有训练LLM权重。
 
-> 请用NX12建立一个内外端厚、中间薄、上下对称的二维轮盘截面，五段径向跨度和四个半厚度可修改，过渡平滑。
+## 两个案例与参数范围
 
-> 请用NX12建立一个带一片叶片的三维轮盘局部模型，包含轮毂、薄盘和加厚外缘，叶片向外伸出并逐渐收窄，主要尺寸参数化。
+| 案例 | 几何生成方式 | 真正可编辑的参数 |
+|---|---|---|
+| 二维轮盘截面 | 原始STEP完整非均匀B样条的控制点和节点，关联点/直线/样条→平面面体；1个面、14条边 | X1～X5、Y1～Y4，以及内侧位置；分段映射驱动完整控制网 |
+| 三维单叶片轮盘 | 内置原始new160.x_t完整B-rep→NX原生非均匀缩放；1个实体、44个面、122条边 | hub_length和rim_radius，分别控制轴向和径向整体尺度 |
 
-也支持 `二维轮盘，X1=23，Y2=10` 和 `三维轮盘，叶尖半径110毫米，扭转角12度`。未说明的尺寸来自recipes.py，计划会列出哪些参数由案例补全。
+三维内孔半径、叶尖半径、轮毂大台阶半径、外缘宽度、薄盘局部厚度和叶高为关联尺寸。改变径向尺度会同时改变孔径、盘缘和叶高；改变轴向尺度会同时改变盘缘宽度和各轴向厚度。不能把这些尺寸误认为可独立优化。没有恢复的局部参数若被要求单独改变，规划会报错，保留原始曲面。
 
-## 放入DiskAgent
+自然语言支持Markdown加粗数值、“约为”“外缘轴向宽度”“叶尖到轮盘轴线的距离”等表述。旧描述中的71.7毫米是参考半径71.68毫米的标称值；二维的20.81等旧值同样经过四舍五入。匹配已知标称尺寸时使用参考精确值，并在nominal_resolutions中记录。结构化parameters是明确修改入口，不做标称值吸附。
 
-本分支已经包含该文件夹和集成代码。重启DiskAgent后访问 `/case-modeling`，或在“自动建模”页点击“两案例建模智能体”。接口为 `POST /api/nx/cases/plan` 和 `POST /api/nx/cases/build`，复用工作台的本机访问与CSRF检查。
+例如：
 
-向其他DiskAgent版本移植时，复制文件夹后可直接调用：
+> 请精确建立带一片叶片的三维轮盘局部，保留原始轮毂台阶、真实叶片曲面与叶根过渡。
+
+> 请精确建立二维轮盘截面，保留原始样条和九个设计参数。
 
 ```python
 from nx_case_agent import plan, execute
-preview = plan('建立二维轮盘')
-result = execute('建立二维轮盘', parameters={'X1':23, 'Y2':10},
+preview = plan('精确建立三维单叶片轮盘')
+# 修改轮毂长度会联动全部轴向尺寸，界面及结果显示关联关系
+result = execute('精确建立三维单叶片轮盘',
+                 parameters={'hub_length':58.0},
                  jobs_root='output/nx_cases')
 ```
 
-`parameters` 是为后续优化智能体保留的结构化入口，经过范围和几何关系校验。创建候选几何已实现；本模块没有自动把候选模型连接到Workbench求解。
+## 精度验收
 
-## 接入LLM的MCP配置
+每次实际生成均执行：
 
-可选依赖：`python -m pip install mcp`。
+1. 检查实体/面体类型及完整拓扑：二维1面14边；三维44面122边。
+2. NX几何内核检查：body consistency、face-face intersection、逐面self intersection。
+3. 对每个真实独立参数扰动0.05，检查几何变化、关联尺寸、内核有效性，再恢复。
+4. 保存、关闭并重开PRT，重新测量并检查几何。
+5. 与独立参考几何进行双向边界及裁剪面内采样距离比较，同时核对面积和体积。距离阈值0.001毫米，面积/体积差阈值0.001 mm²/mm³。
+
+二维参考用原始节点和控制点经UF直接构造，候选使用NX关联控制点和StudioSpline；三维基线参考独立载入原始Parasolid，候选带缩放特征。变更尺寸时，比较目标是按同一明确变换形成的参考，不宣称仍与未修改的零件完全相同。
+
+偏差结果是采样验证，不是连续曲面全域Hausdorff上界证明。结果保留采样数、覆盖面数、双向最大距离、面积/体积差和来源哈希，不能只凭体积或面数一致判定几何一致。源文件原有微小不对称和接缝按原样保留，不人为镜像或磨平。
+
+## DiskAgent与MCP
+
+DiskAgent重启后访问 `/case-modeling`，或从自动建模页面进入“两案例建模智能体”。路由仍为 `POST /api/nx/cases/plan` 和 `POST /api/nx/cases/build`。
+
+独立MCP可选安装依赖：`python -m pip install mcp`。
 
 ```json
 {
   "mcpServers": {
     "nx12_cases": {
-      "command": "<Python可执行文件绝对路径>",
-      "args": ["<nx_case_agent目录绝对路径>/mcp_server.py"],
+      "command": "<Python绝对路径>",
+      "args": ["<nx_case_agent绝对路径>/mcp_server.py"],
       "env": {
-        "NX_AGENT_NXBIN": "<NX12安装目录>/NXBIN",
-        "SPLM_LICENSE_SERVER": "<接收方本机许可设置>"
+        "NX_AGENT_NXBIN": "<本机NX12目录>/NXBIN",
+        "SPLM_LICENSE_SERVER": "<本机许可设置>"
       }
     }
   }
 }
 ```
 
-工具：list_learned_models、preview_model、build_model。DiskAgent现有NX MCP服务也新增nx_case_preview和nx_case_build；后者默认预览，live=true时建模。
+工具：list_learned_models、preview_model、build_model。DiskAgent原NX MCP服务中的nx_case_preview和nx_case_build也调用本模块。
 
-## 可编辑几何与验证
+## 开发与证据
 
-- 二维：内侧位置加九个设计尺寸，共10个独立命名表达式；关联点→直线/三次Bezier样条→二维面体。过渡两端的控制杆分别沿相邻平直段或薄盘斜线，杆长径向投影取对应过渡跨度的1/3，保持G1切向连续。
-- 三维：14个独立命名表达式和1个关联表达式；平滑盘体轮廓回转→三截面渐缩扭转叶片放样→实体求和→原生叶根边倒圆。`root_fillet`缺省0.3毫米，允许修改；`blade_height=tip_radius-rim_radius`直接参与放样截面定位。盘体径向过渡节点取轮毂至盘缘间距的45%、75%、90%，辅助控制点随主尺寸关联。
-- 支持“叶片高度38毫米”“建立约8.5°的局部扇区”“叶根圆角半径0.4毫米”。高度输入转换为叶尖半径，不增加重复独立约束；同时给出矛盾的高度和半径会拒绝。结构化`parameters`优先于原描述，可用于优化候选值。网页显示中文参数名、单位、设计初值标记和只读关联高度。
-- 每次生成后，逐个将独立尺寸扰动0.05（上限处反向），检查NX更新、几何变化、关联高度、过渡切向和几何有效性，再恢复初始值。保存并重开后再次测量和检查几何。
-- 几何检查调用NX12的`UF_MODL_ask_body_consistency`、`UF_MODL_ask_face_face_intersect`及逐面的`UF_MODL_ask_face_self_intersect`；检测到错误即返回失败，不以生成文件作为成功依据。8个平滑连接处通过原生曲线端点和一阶导数检查，位置容差0.001毫米、切向夹角容差0.01度。结果中的`geometry_checks`、`derived_parameters`、`parameter_table`和`modeling_steps`可供上层智能体读取。
-- 未提供的叶片截面形状和扭转采用明确的设计初值；菱形截面叶片不等同于气动翼型。检查覆盖生成候选及局部扰动，不保证任意参数组合都可建成，优化时须逐个调用并核验候选模型。
+模块职责：precision_recipes.py定义精确案例、真实参数和资产哈希；core.py负责解析与规划；exact_geometry.py创建完整几何；nx_kernel.py负责内核和双向偏差检查；native_journal.py执行NX生成与验收。recipes.py仅为兼容导出。
 
-示例PRT和实测记录在 `examples/`。它们属于新生成的简化可优化模型，不是源文件的精确复刻。配方来源见knowledge_manifest.json；接收方无需携带原始STEP或Parasolid文件，正常建模不导入源文件。
-
-开发测试：`python -m unittest nx_case_agent.test_core`。安装mcp后可运行真实协议与NX验收脚本 `python nx_case_agent/acceptance.py`：使用`regression_prompts.json`中的两段原始测试描述、两段简短描述和一组修改尺寸描述，生成5个新模型、逐项验证62次参数更新，并更新验收记录与示例PRT。原始测试仅传入description，不补传结构化参数。
+运行规划测试：`python -m unittest nx_case_agent.test_core`。
+真实MCP→NX验收：`python nx_case_agent/acceptance.py`；加 `--rounds 2` 可重复两轮。只提交regression_prompts.json中的原始description，不额外补传参数。最新验收结果在acceptance_mcp.json，示例PRT在examples目录。

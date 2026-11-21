@@ -1,132 +1,190 @@
 {
-  "ok": true,
   "model_id": "geom2d",
-  "output": "D:\\Codex\\Workplace\\MCP\\DiskAgent\\nx_case_agent\\jobs\\46e23036602547af9376b04f9c6009e5\\model.prt",
-  "parameterized": true,
-  "reopened": true,
   "parameters": {
     "inner_radius": 83.0,
-    "X1": 20.81,
-    "X2": 49.43,
-    "X3": 52.97,
-    "X4": 23.29,
+    "X1": 20.81175,
+    "X2": 49.425541,
+    "X3": 52.973414,
+    "X4": 23.289295,
     "X5": 7.5,
-    "Y1": 45.92,
-    "Y2": 8.18,
-    "Y3": 7.4,
+    "Y1": 45.921294,
+    "Y2": 8.1765525,
+    "Y3": 7.398638,
     "Y4": 20.0
   },
   "inferred_parameters": {},
-  "geometry": {
-    "solid": false,
-    "faces": 1,
-    "edges": 12,
-    "area_mm2": 6353.437197218285,
-    "volume_mm3": null,
-    "vertex_bounds": [
-      83.0,
-      -45.92,
-      0.0,
-      237.00000000000003,
-      45.92,
-      0.0
-    ]
-  },
-  "notes": [
-    "厚薄过渡采用三次Bezier关联样条，与平直段及薄盘段保持G1切向连续；不精确复刻参考样条。"
+  "supplied_parameters": [
+    "X1",
+    "X2",
+    "X3",
+    "X4",
+    "X5",
+    "Y1",
+    "Y2",
+    "Y3",
+    "Y4",
+    "inner_radius"
   ],
-  "recipe_version": "2.1",
-  "derived_parameters": {},
+  "notes": [
+    "默认重建原始边界，不做圆弧、Bezier或镜像近似；保留源文件微小上下差异。",
+    "九参数修改按分段坐标映射驱动完整控制网。"
+  ],
+  "recipe_version": "3.0",
+  "geometry_mode": "precise",
+  "parameterization_scope": "nine_parameter_exact_control_net",
+  "full_feature_history_recovered": false,
+  "nominal_resolutions": [
+    {
+      "parameter": "X1",
+      "requested_nominal": 20.81,
+      "reference_exact": 20.81175,
+      "reason": "reference_rounded_dimension"
+    },
+    {
+      "parameter": "X2",
+      "requested_nominal": 49.43,
+      "reference_exact": 49.425541,
+      "reason": "reference_rounded_dimension"
+    },
+    {
+      "parameter": "X3",
+      "requested_nominal": 52.97,
+      "reference_exact": 52.973414,
+      "reason": "reference_rounded_dimension"
+    },
+    {
+      "parameter": "X4",
+      "requested_nominal": 23.29,
+      "reference_exact": 23.289295,
+      "reason": "reference_rounded_dimension"
+    },
+    {
+      "parameter": "Y1",
+      "requested_nominal": 45.92,
+      "reference_exact": 45.921294,
+      "reason": "reference_rounded_dimension"
+    },
+    {
+      "parameter": "Y2",
+      "requested_nominal": 8.18,
+      "reference_exact": 8.1765525,
+      "reason": "reference_rounded_dimension"
+    },
+    {
+      "parameter": "Y3",
+      "requested_nominal": 7.4,
+      "reference_exact": 7.398638,
+      "reason": "reference_rounded_dimension"
+    }
+  ],
+  "reference_baseline": true,
   "parameter_table": [
     {
       "name": "inner_radius",
       "label": "内半径",
       "value": 83.0,
       "unit": "mm",
-      "source": "description_or_override"
+      "source": "description_or_override",
+      "editable": true
     },
     {
       "name": "X1",
       "label": "X1",
-      "value": 20.81,
+      "value": 20.81175,
       "unit": "mm",
-      "source": "description_or_override"
+      "source": "description_or_override",
+      "editable": true
     },
     {
       "name": "X2",
       "label": "X2",
-      "value": 49.43,
+      "value": 49.425541,
       "unit": "mm",
-      "source": "description_or_override"
+      "source": "description_or_override",
+      "editable": true
     },
     {
       "name": "X3",
       "label": "X3",
-      "value": 52.97,
+      "value": 52.973414,
       "unit": "mm",
-      "source": "description_or_override"
+      "source": "description_or_override",
+      "editable": true
     },
     {
       "name": "X4",
       "label": "X4",
-      "value": 23.29,
+      "value": 23.289295,
       "unit": "mm",
-      "source": "description_or_override"
+      "source": "description_or_override",
+      "editable": true
     },
     {
       "name": "X5",
       "label": "X5",
       "value": 7.5,
       "unit": "mm",
-      "source": "description_or_override"
+      "source": "description_or_override",
+      "editable": true
     },
     {
       "name": "Y1",
       "label": "Y1",
-      "value": 45.92,
+      "value": 45.921294,
       "unit": "mm",
-      "source": "description_or_override"
+      "source": "description_or_override",
+      "editable": true
     },
     {
       "name": "Y2",
       "label": "Y2",
-      "value": 8.18,
+      "value": 8.1765525,
       "unit": "mm",
-      "source": "description_or_override"
+      "source": "description_or_override",
+      "editable": true
     },
     {
       "name": "Y3",
       "label": "Y3",
-      "value": 7.4,
+      "value": 7.398638,
       "unit": "mm",
-      "source": "description_or_override"
+      "source": "description_or_override",
+      "editable": true
     },
     {
       "name": "Y4",
       "label": "Y4",
       "value": 20.0,
       "unit": "mm",
-      "source": "description_or_override"
+      "source": "description_or_override",
+      "editable": true
     }
   ],
-  "modeling_steps": [
-    {
-      "name": "LEARNED_NINE_PARAMETER_SECTION",
-      "type": "SKIN"
-    }
-  ],
+  "ok": true,
+  "output": "D:\\Codex\\Workplace\\MCP\\DiskAgent\\nx_case_agent\\jobs\\681a9e0d25d243df866ee272125d6e0c\\model.prt",
+  "parameterized": true,
+  "reopened": true,
+  "geometry": {
+    "solid": false,
+    "faces": 1,
+    "edges": 14,
+    "area_mm2": 5354.8612091178975,
+    "volume_mm3": null,
+    "vertex_bounds": [
+      83.0,
+      -45.921294,
+      0.0,
+      237.00000000000003,
+      45.921294,
+      0.0
+    ]
+  },
   "geometry_checks": {
     "kernel": {
       "body_consistency": "passed",
       "face_face_intersection": "passed",
       "face_self_intersection": "passed",
       "faces_checked": 1
-    },
-    "transitions": {
-      "joins_checked": 8,
-      "max_gap_mm": 7.105427357601002e-15,
-      "max_tangent_angle_degrees": 0.0,
-      "passed": true
     }
   },
   "reopened_geometry_checks": {
@@ -135,14 +193,51 @@
     "face_self_intersection": "passed",
     "faces_checked": 1
   },
+  "reference_comparison": {
+    "passed": true,
+    "distance_tolerance_mm": 0.001,
+    "metric_tolerance": 0.001,
+    "same_topology": true,
+    "candidate_to_reference": {
+      "samples": 135,
+      "faces_sampled": 1,
+      "max_distance_mm": 5.851740734711404e-07,
+      "max_solver_accuracy_mm": 0.0
+    },
+    "reference_to_candidate": {
+      "samples": 135,
+      "faces_sampled": 1,
+      "max_distance_mm": 5.851740734711404e-07,
+      "max_solver_accuracy_mm": 0.0
+    },
+    "area_difference_mm2": 9.094947017729282e-13,
+    "volume_difference_mm3": 0,
+    "reference_geometry": {
+      "solid": false,
+      "faces": 1,
+      "edges": 14,
+      "area_mm2": 5354.861209117898,
+      "volume_mm3": null,
+      "vertex_bounds": [
+        83.0,
+        -45.921294,
+        0.0,
+        237.00000000000003,
+        45.921294,
+        0.0
+      ]
+    },
+    "method": "bidirectional_edge_and_trimmed_face_interior_sampling_plus_metrics",
+    "continuous_hausdorff_bound_proven": false
+  },
+  "derived_parameters": {},
   "parameter_tests": [
     {
       "parameter": "inner_radius",
       "delta": 0.05,
       "update_errors": 0,
-      "baseline": 6353.437197218285,
-      "changed": 6353.437197218302,
-      "vertex_bound_change_mm": 0.04999999999999716,
+      "baseline": 5354.8612091178975,
+      "changed": 5354.861209117901,
       "restored": true,
       "geometry_checks": {
         "kernel": {
@@ -150,12 +245,6 @@
           "face_face_intersection": "passed",
           "face_self_intersection": "passed",
           "faces_checked": 1
-        },
-        "transitions": {
-          "joins_checked": 8,
-          "max_gap_mm": 1.5888218580782548e-14,
-          "max_tangent_angle_degrees": 0.0,
-          "passed": true
         }
       },
       "derived_parameters": {}
@@ -164,9 +253,8 @@
       "parameter": "X1",
       "delta": 0.05,
       "update_errors": 0,
-      "baseline": 6353.437197218285,
-      "changed": 6358.029197218301,
-      "vertex_bound_change_mm": 0.049999999999954525,
+      "baseline": 5354.8612091178975,
+      "changed": 5359.4533385179,
       "restored": true,
       "geometry_checks": {
         "kernel": {
@@ -174,12 +262,6 @@
           "face_face_intersection": "passed",
           "face_self_intersection": "passed",
           "faces_checked": 1
-        },
-        "transitions": {
-          "joins_checked": 8,
-          "max_gap_mm": 1.5888218580782548e-14,
-          "max_tangent_angle_degrees": 0.0,
-          "passed": true
         }
       },
       "derived_parameters": {}
@@ -188,9 +270,8 @@
       "parameter": "X2",
       "delta": 0.05,
       "update_errors": 0,
-      "baseline": 6353.437197218285,
-      "changed": 6356.154334373685,
-      "vertex_bound_change_mm": 0.049999999999954525,
+      "baseline": 5354.8612091178975,
+      "changed": 5356.686563943833,
       "restored": true,
       "geometry_checks": {
         "kernel": {
@@ -198,12 +279,6 @@
           "face_face_intersection": "passed",
           "face_self_intersection": "passed",
           "faces_checked": 1
-        },
-        "transitions": {
-          "joins_checked": 8,
-          "max_gap_mm": 1.4210854715202004e-14,
-          "max_tangent_angle_degrees": 1.2074182697257333e-06,
-          "passed": true
         }
       },
       "derived_parameters": {}
@@ -212,9 +287,8 @@
       "parameter": "X3",
       "delta": 0.05,
       "update_errors": 0,
-      "baseline": 6353.437197218285,
-      "changed": 6354.211797725283,
-      "vertex_bound_change_mm": 0.049999999999954525,
+      "baseline": 5354.8612091178975,
+      "changed": 5355.639968624143,
       "restored": true,
       "geometry_checks": {
         "kernel": {
@@ -222,12 +296,6 @@
           "face_face_intersection": "passed",
           "face_self_intersection": "passed",
           "faces_checked": 1
-        },
-        "transitions": {
-          "joins_checked": 8,
-          "max_gap_mm": 7.105427357601002e-15,
-          "max_tangent_angle_degrees": 0.0,
-          "passed": true
         }
       },
       "derived_parameters": {}
@@ -236,9 +304,8 @@
       "parameter": "X4",
       "delta": 0.05,
       "update_errors": 0,
-      "baseline": 6353.437197218285,
-      "changed": 6354.801476312935,
-      "vertex_bound_change_mm": 0.04999999999998295,
+      "baseline": 5354.8612091178975,
+      "changed": 5355.9647216093545,
       "restored": true,
       "geometry_checks": {
         "kernel": {
@@ -246,12 +313,6 @@
           "face_face_intersection": "passed",
           "face_self_intersection": "passed",
           "faces_checked": 1
-        },
-        "transitions": {
-          "joins_checked": 8,
-          "max_gap_mm": 7.105427357601002e-15,
-          "max_tangent_angle_degrees": 8.537736462515939e-07,
-          "passed": true
         }
       },
       "derived_parameters": {}
@@ -260,9 +321,8 @@
       "parameter": "X5",
       "delta": 0.05,
       "update_errors": 0,
-      "baseline": 6353.437197218285,
-      "changed": 6355.437197218285,
-      "vertex_bound_change_mm": 0.04999999999998295,
+      "baseline": 5354.8612091178975,
+      "changed": 5356.8612091178975,
       "restored": true,
       "geometry_checks": {
         "kernel": {
@@ -270,12 +330,6 @@
           "face_face_intersection": "passed",
           "face_self_intersection": "passed",
           "faces_checked": 1
-        },
-        "transitions": {
-          "joins_checked": 8,
-          "max_gap_mm": 7.105427357601002e-15,
-          "max_tangent_angle_degrees": 0.0,
-          "passed": true
         }
       },
       "derived_parameters": {}
@@ -284,9 +338,8 @@
       "parameter": "Y1",
       "delta": 0.05,
       "update_errors": 0,
-      "baseline": 6353.437197218285,
-      "changed": 6357.989697462773,
-      "vertex_bound_change_mm": 0.04999999999999716,
+      "baseline": 5354.8612091178975,
+      "changed": 5358.261935803881,
       "restored": true,
       "geometry_checks": {
         "kernel": {
@@ -294,12 +347,6 @@
           "face_face_intersection": "passed",
           "face_self_intersection": "passed",
           "faces_checked": 1
-        },
-        "transitions": {
-          "joins_checked": 8,
-          "max_gap_mm": 7.105427357601002e-15,
-          "max_tangent_angle_degrees": 0.0,
-          "passed": true
         }
       },
       "derived_parameters": {}
@@ -308,9 +355,8 @@
       "parameter": "Y2",
       "delta": 0.05,
       "update_errors": 0,
-      "baseline": 6353.437197218285,
-      "changed": 6358.856250359843,
-      "vertex_bound_change_mm": 0.0,
+      "baseline": 5354.8612091178975,
+      "changed": 5361.132882777188,
       "restored": true,
       "geometry_checks": {
         "kernel": {
@@ -318,12 +364,6 @@
           "face_face_intersection": "passed",
           "face_self_intersection": "passed",
           "faces_checked": 1
-        },
-        "transitions": {
-          "joins_checked": 8,
-          "max_gap_mm": 7.105427357601002e-15,
-          "max_tangent_angle_degrees": 0.0,
-          "passed": true
         }
       },
       "derived_parameters": {}
@@ -332,9 +372,8 @@
       "parameter": "Y3",
       "delta": 0.05,
       "update_errors": 0,
-      "baseline": 6353.437197218285,
-      "changed": 6356.95114643318,
-      "vertex_bound_change_mm": 0.0,
+      "baseline": 5354.8612091178975,
+      "changed": 5359.166715899064,
       "restored": true,
       "geometry_checks": {
         "kernel": {
@@ -342,12 +381,6 @@
           "face_face_intersection": "passed",
           "face_self_intersection": "passed",
           "faces_checked": 1
-        },
-        "transitions": {
-          "joins_checked": 8,
-          "max_gap_mm": 7.105427357601002e-15,
-          "max_tangent_angle_degrees": 1.2074182697257333e-06,
-          "passed": true
         }
       },
       "derived_parameters": {}
@@ -356,9 +389,8 @@
       "parameter": "Y4",
       "delta": 0.05,
       "update_errors": 0,
-      "baseline": 6353.437197218285,
-      "changed": 6355.351694756315,
-      "vertex_bound_change_mm": 0.0,
+      "baseline": 5354.8612091178975,
+      "changed": 5356.283299100278,
       "restored": true,
       "geometry_checks": {
         "kernel": {
@@ -366,17 +398,79 @@
           "face_face_intersection": "passed",
           "face_self_intersection": "passed",
           "faces_checked": 1
-        },
-        "transitions": {
-          "joins_checked": 8,
-          "max_gap_mm": 7.105427357601002e-15,
-          "max_tangent_angle_degrees": 0.0,
-          "passed": true
         }
       },
       "derived_parameters": {}
     }
   ],
-  "job_directory": "D:\\Codex\\Workplace\\MCP\\DiskAgent\\nx_case_agent\\jobs\\46e23036602547af9376b04f9c6009e5",
-  "acceptance_case": "original_2d"
+  "modeling_steps": [
+    {
+      "name": "EXACT_BOUNDARY_0",
+      "type": "LINE"
+    },
+    {
+      "name": "EXACT_BOUNDARY_1",
+      "type": "LINE"
+    },
+    {
+      "name": "EXACT_BOUNDARY_2",
+      "type": "LINE"
+    },
+    {
+      "name": "EXACT_BOUNDARY_3",
+      "type": "LINE"
+    },
+    {
+      "name": "EXACT_BOUNDARY_4",
+      "type": "SPLINE"
+    },
+    {
+      "name": "EXACT_BOUNDARY_5",
+      "type": "SPLINE"
+    },
+    {
+      "name": "EXACT_BOUNDARY_6",
+      "type": "SPLINE"
+    },
+    {
+      "name": "EXACT_BOUNDARY_7",
+      "type": "LINE"
+    },
+    {
+      "name": "EXACT_BOUNDARY_8",
+      "type": "LINE"
+    },
+    {
+      "name": "EXACT_BOUNDARY_9",
+      "type": "LINE"
+    },
+    {
+      "name": "EXACT_BOUNDARY_10",
+      "type": "LINE"
+    },
+    {
+      "name": "EXACT_BOUNDARY_11",
+      "type": "SPLINE"
+    },
+    {
+      "name": "EXACT_BOUNDARY_12",
+      "type": "SPLINE"
+    },
+    {
+      "name": "EXACT_BOUNDARY_13",
+      "type": "SPLINE"
+    },
+    {
+      "name": "EXACT_NINE_PARAMETER_SECTION",
+      "type": "SKIN"
+    }
+  ],
+  "method": "native_full_knot_control_net_reconstruction",
+  "exact_original_baseline": true,
+  "simplified": false,
+  "source_asset_sha256": "9e8269e2e69c044e3ebb0acfca287ff63a0709907cdbcfa1a6ad17b522ce9f72",
+  "job_directory": "D:\\Codex\\Workplace\\MCP\\DiskAgent\\nx_case_agent\\jobs\\681a9e0d25d243df866ee272125d6e0c",
+  "acceptance_case": "original_2d",
+  "round": 1,
+  "seconds": 12.87
 }
