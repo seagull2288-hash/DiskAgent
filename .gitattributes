@@ -6,3 +6,7 @@
 *.prt -diff
 *.mechdb -diff
 *.agdb -diff
+
+# Learned geometry is byte-preserved and checked against the asset manifest.
+nx_case_agent/assets/*.x_t -diff
+nx_case_agent/assets/*.json whitespace=cr-at-eol
